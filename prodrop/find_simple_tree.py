@@ -2,6 +2,10 @@
 find_simple_sentence.py
 Author: Adam Beagle
 
+PURPOSE:
+    Find the shortest, simplest tree that features a pro-drop. A simple
+    sentence tree will be useful for learning/testing purposes.
+
 DESCRIPTION:
    Locates the simplest (i.e. fewest tree lines) pro-drop sentences in .parse
    files in a directory given by INPUT_PATH.
@@ -12,6 +16,7 @@ from exceptions import MissingParseFilesError, NoTreesFoundError
 from util import get_files_by_ext, itertrees
 
 INPUT_PATH = '../treebank_data/00/'
+OUTFILE = 'shortest_tree.txt'
 
 def phrase_in_tree(tree, phrase):
     """
@@ -52,11 +57,16 @@ if __name__ == '__main__':
         )
 
     print(' Search complete.')
-    print('\nSHORTEST TREE:')
-    for line in shortest:
-        print(line, end='')
+    print('Writing output... ', end='')
+    with open(OUTFILE, 'w', encoding='utf8') as f:
+        f.write('SHORTEST TREE (from file {0}):\n\n'.format(shortest_file))
+        for line in shortest:
+            f.write(line)
 
-    print('\nTree found in file {0}'.format(shortest_file))
+    print(' Complete.')
+    print('\nOutput written to {0}'.format(OUTFILE))
+
+    
 
                 
                 
