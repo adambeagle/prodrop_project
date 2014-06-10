@@ -1,0 +1,7 @@
+GENERAL GOAL
+============
+Extract and create two data sets: pro-drops and subjects
+  Each subject or drop has a verb associated with it
+For each verb, report # associations with pro-drop and explicit subject
+
+*T* in e.g. (NP-SBJ (-NONE- *T*-1)) means the subject is explicit in the sentence but preceded the verb. 
