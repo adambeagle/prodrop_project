@@ -49,11 +49,9 @@ INSTRUCTIONS:
     3) Invoke the script with python single_asterisk_lines.py at the command
        line.
 """
-from os import listdir
-from os.path import normpath, splitext
 import re
 
-from timer import Timer
+from util import Timer, get_files_by_ext
 
 INPUT_PATH = '../treebank_data/00/'
 OUTFILE = 'out.txt'
@@ -95,31 +93,6 @@ def file_matches(path, pattern, *flags, group=0):
             if match is not None:
                 yield match.group(group)
 
-def get_files_by_ext(directory, ext, prepend_dir=False):
-    """
-    Return list of files in 'directory' whose extensions match 'ext.'
-    Matching is case-insensitive.
-
-    If prepend_dir is True, directory will be prepended to each filename in
-    list. Otherwise, the filenames alone are returned.
-    """
-    files = []
-
-    if not ext[0] == '.':
-        ext = '.{0}'.format(ext.lower())
-    else:
-        ext = ext.lower()
-
-    directory = normpath(directory)
-    
-    for f in listdir(directory):
-        if splitext(f)[1].lower() == ext:
-            if prepend_dir:
-                files.append('{0}\\{1}'.format(directory, f))
-            else:
-                files.append(f)
-
-    return files
 
 ###############################################################################
 if __name__ == '__main__':
