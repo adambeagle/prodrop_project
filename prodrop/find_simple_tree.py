@@ -1,5 +1,5 @@
 """
-find_simple_sentence.py
+find_simple_tree.py
 Author: Adam Beagle
 
 PURPOSE:
