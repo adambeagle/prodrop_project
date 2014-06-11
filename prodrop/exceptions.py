@@ -3,3 +3,6 @@ class NoTreesFoundError(Exception):
 
 class MissingParseFilesError(Exception):
     pass
+
+class TreeConstructionError(Exception):
+    pass

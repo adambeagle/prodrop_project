@@ -7,6 +7,8 @@ PURPOSE:
     easy navigation and searching.
 """
 import re
+
+from exceptions import TreeConstructionError
    
 thrunode_pattern = r'^\((?P<tag>\S+) \('
 endnode_pattern = r'^\((?P<tag>\S+) (?P<word>[^\s()]+)\)'
@@ -88,6 +90,13 @@ class ParseTree:
                     stripped = stripped[len(match.group()) - 1:]
                 else:
                     match = re.match(endnode_pattern, stripped)
+                    
+                    if match is None:
+                        raise TreeConstructionError("Unexpected tag situation. " +
+                            "No tag opening or close found.\n" +
+                            "Segment: {0}\nLine: {1}\n".format(stripped, line)
+                        )
+                    
                     node = ParseTreeEndNode(node, 
                         match.group('tag'), match.group('word')
                     )
