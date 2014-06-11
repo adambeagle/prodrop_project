@@ -1,22 +1,25 @@
 """
-find_simple_tree.py
+find_simple_trees.py
 Author: Adam Beagle
 
 PURPOSE:
-    Find the shortest, simplest tree that features a pro-drop. A simple
-    sentence tree will be useful for learning/testing purposes.
+    Find short, simple trees that include a pro-drop. These trees will be
+    useful for learning/testing purposes.
 
 DESCRIPTION:
-   Locates the simplest (i.e. fewest tree lines) pro-drop sentences in .parse
-   files in a directory given by INPUT_PATH.
+   Locates trees with a pro-drop in .parse files in a directory given by
+   INPUT_PATH that are fewer than MAX_LINES in length, then writes these
+   trees to OUTFILE. A maxiumum of MAX_TREES will be written.
 """
 from os.path import basename
 
-from exceptions import MissingParseFilesError, NoTreesFoundError
+from exceptions import MissingParseFilesError
 from util import get_files_by_ext, itertrees
 
 INPUT_PATH = '../treebank_data/00/'
-OUTFILE = 'shortest_tree.txt'
+OUTFILE = 'simple_trees.txt'
+MAX_LINES = 8
+MAX_TREES = 25
 
 def phrase_in_tree(tree, phrase):
     """
@@ -28,46 +31,43 @@ def phrase_in_tree(tree, phrase):
 
     return False
 
+def report_short_trees(path, search_phrase, trees_found):
+    for tree in itertrees(path):
+        if phrase_in_tree(tree, search_phrase):
+            
+            # If tree meets criteria, write it to outfile
+            if len(tree) <= MAX_LINES and trees_found < MAX_TREES:
+                outfile.write('{0}\n'.format(''.join(tree)))
+                trees_found += 1
+
+    return trees_found
+
 ###############################################################################
 if __name__ == '__main__':
     search_phrase = '(NP-SBJ (-NONE- *))'
     files = get_files_by_ext(INPUT_PATH, '.parse', prepend_dir=True)
-    shortest = None
-    shortest_len = 9999
-    shortest_file = None
-
+    trees_found = 0
+    
     if not files:
         raise MissingParseFilesError(
             'No .parse files found in {0}'.format(INPUT_PATH)
         )
 
     print('Starting search...', end='')
-    for path in files:
-        for tree in itertrees(path):
-            if phrase_in_tree(tree, search_phrase):
-                tree_len = len(tree)
-                if tree_len < shortest_len:
-                    shortest = tree[:]
-                    shortest_len = tree_len
-                    shortest_file = basename(path)
+    with open(OUTFILE, 'w', encoding='utf8') as outfile:
+        for path in files:
+            trees_found = report_short_trees(
+                path, search_phrase, trees_found
+            )
 
-    if shortest == None:
-        raise NoTreesFoundError(
-            'No parse trees found in {0}'.format(INPUT_PATH)
-        )
-
-    print(' Search complete.')
-    print('Writing output... ', end='')
-    with open(OUTFILE, 'w', encoding='utf8') as f:
-        f.write('SHORTEST TREE (from file {0}):\n\n'.format(shortest_file))
-        for line in shortest:
-            f.write(line)
-
-    print(' Complete.')
-    print('\nOutput written to {0}'.format(OUTFILE))
-
+            if trees_found >= MAX_TREES:
+                break
+                
+    print(' Search complete. {0} trees found.'.format(trees_found))
     
-
-                
-                
-                
+    if not trees_found:
+        print('\nNo pro-drop trees found with length <= {0}'.format(
+            MAX_LINES)
+        )
+    else:
+        print('\nOutput written to {0}'.format(OUTFILE))
