@@ -1,0 +1,53 @@
+(from http://www.ircs.upenn.edu/arabic/Jan03release/TBParsing-info.txt)
+
+TAGLIST
+
+Constituent tags:
+
+S	sentence
+NP	noun phrase
+VP	verb phrase
+PP	prepositional phrase
+SBAR	S-bar (subordinate clause, complementizer or WH- and sentence)
+SBARQ	S-bar that is a question
+SQ	S that is a question
+NX	noun head in certain complex coordination contexts
+PRN	parenthetical
+PRT	particle
+QP	quantity phrase (multi-word numbers)
+ADJP	adjective phrase
+ADVP	adverb phrase
+FRAG	fragment
+WHNP	WH- noun phrase
+WHPP	WH- prepositional phrase
+WHADJP	WH- adjective phrase
+WHADVP	WH- adverb phrase
+CONJP	conjunction phrase (multi-word conjunction)
+INTJ	interjection
+NAC	Not-A-Constituent (mostly rightward moved conjuncts with conjunction)
+UCP	Unlike-Coordinated-Phrase (dominates coordination of NP and PP, e.g.)
+X	unknown, technical problem, etc.
+
+
+Function (dash) tags:
+
+-SBJ	subject
+-OBJ	object (ONLY BRAND NEW TAG FOR ARABIC!)
+-TPC	topicalized
+-PRD	predicate
+-PRP	purpose
+-CLR	CLosely-Related (non dative PP argument of verb, for the most part)
+-LOC	locative
+-DIR	directional
+-MNR	manner
+-TMP	temporal
+-ADV	adverbial (for NP, S and SBAR)
+-LGS	LoGical Subject (NP object of by PP in passives)
+-NOM	nominal (for S and SBAR)
+-DTV	dative
+-VOC	vocative
+-BNF	benefactive
+-EXT	extent
+-CLF	cleft (as in, it-cleft)
+-HLN	headline
+-TTL	title
