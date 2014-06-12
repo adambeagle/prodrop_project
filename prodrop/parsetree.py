@@ -24,17 +24,27 @@ class ParseTreeNode:
         self.tag = tag
         
         if self.parent is not None:
-            self.parent.children.append(self)
+            self.parent.add_child(self)
 
 class ParseTreeThruNode(ParseTreeNode):
     """
     ATTRIBUTES:
-      * children
+      * children (read-only)
+      
+    METHODS:
+      * add_child
     """
     def __init__(self, parent, tag):
         super().__init__(parent, tag)
-        self.children = []
-
+        self._children = ()
+        
+    def add_child(self, child):
+        self._children += (child, )
+        
+    @property
+    def children(self):
+        return self._children
+    
 class ParseTreeEndNode(ParseTreeNode):
     """
     ATTRIBUTES:
