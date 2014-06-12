@@ -54,7 +54,7 @@ import re
 from util import Timer, get_files_by_ext
 
 INPUT_PATH = '../treebank_data/00/'
-OUTFILE = 'out.txt'
+OUTFILE = 'single_asterisk_lines.txt'
 
 def distinct_match_lines(path, pattern, group=0):
     """
