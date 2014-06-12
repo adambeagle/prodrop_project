@@ -1,0 +1,7 @@
+﻿(TOP (SQ (CONJ وَ-)
+         (VP (IV3FS+IV+IVSUFF_MOOD:I -تُسَيْطِرُ)
+             (NP-SBJ (-NONE- *))
+             (PP-CLR (PREP عَلَي-)
+                     (NP (PRON_3FS -ها))))
+         (PUNC ?)))
+
