@@ -198,7 +198,19 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
         node = node.children[2]
         self.assertEqual(node.tag, 'PUNC')
         self.assertEqual(node.word, '.')
-    
+        
+    def test_iterendnodes(self):
+        correct_tag_order = ('NNP', 'VPZ', 'NNP', 'PUNC')
+        correct_word_order = ('John', 'loves', 'Mary', '.')
+        visited = 0
+        
+        for i, node in enumerate(self.tree.iterendnodes()):
+            visited  += 1
+            self.assertEqual(node.tag, correct_tag_order[i])
+            self.assertEqual(node.word, correct_word_order[i])
+            
+        self.assertEqual(visited, len(correct_tag_order))
+            
     def test_iternodes(self):
         correct_tag_order = ('TOP', 'S', 'NP', 'NNP', 'VP', 'VPZ', 'NP', 'NNP', 'PUNC')
         visited = 0
@@ -210,6 +222,12 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
         # The above loop may not raise an exception if some nodes were never yielded.
         # This ensures each was actually visited.
         self.assertEqual(visited, len(correct_tag_order))
+        
+    def test_iterwords(self):
+        correct_words = ('John', 'loves', 'Mary', '.')
+        
+        for word, correct_word in zip(self.tree.iterwords(), correct_words):
+            self.assertEqual(word, correct_word)
             
     def test_search_by_tag(self):
         self.assertEqual(len(self.tree.search_by_tag('TOP')), 1)
@@ -229,6 +247,9 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
         self.assertIsInstance(vpznode, ParseTreeEndNode)
         self.assertEqual(vpznode.word, 'loves')
         self.assertEqual(vpznode.parent.tag, 'VP')
+        
+    def test_sentence(self):
+        self.assertEqual(self.tree.sentence, 'John loves Mary.')
         
     def test_treebank_notation(self):
         self.assertEqual(self.rawdata, self.tree.treebank_notation)

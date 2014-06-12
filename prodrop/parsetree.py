@@ -12,7 +12,7 @@ from exceptions import TreeConstructionError
    
 thrunode_pattern = r'^\((?P<tag>\S+) \('
 endnode_pattern = r'^\((?P<tag>\S+) (?P<word>[^\s()]+)\)'
-   
+
 class ParseTreeNode:
     """
     ATTRIBUTES:
@@ -25,6 +25,14 @@ class ParseTreeNode:
         
         if self.parent is not None:
             self.parent.add_child(self)
+            
+    @property
+    def has_children(self):
+        raise NotImplementedError()
+        
+    @property
+    def is_end(self):
+        raise NotImplementedError()
 
 class ParseTreeThruNode(ParseTreeNode):
     """
@@ -45,7 +53,15 @@ class ParseTreeThruNode(ParseTreeNode):
         
     @property
     def children(self):
-        return self._children
+        return self._children[:]
+        
+    @property
+    def has_children(self):
+        return bool(self._children)
+        
+    @property
+    def is_end(self):
+        return False
     
 class ParseTreeEndNode(ParseTreeNode):
     """
@@ -55,6 +71,14 @@ class ParseTreeEndNode(ParseTreeNode):
     def __init__(self, parent, tag, word):
         super().__init__(parent, tag)
         self.word = word
+        
+    @property
+    def has_children(self):
+        return False
+        
+    @property
+    def is_end(self):
+        return True
 
 class ParseTree:
     """
@@ -68,6 +92,7 @@ class ParseTree:
     TODO improved navigation and searching. 
     
     ATTRIBUTES:
+      * sentence
       * top - The top-level tree node. This will always have the tag 'TOP'
       * treebank_notation - The Penn Treebank bracketed notation from which
                             the tree was built.
@@ -88,6 +113,12 @@ class ParseTree:
 
         self._build_from_lines(lines)
         
+    def iterendnodes(self):
+        """
+        Yield each end node of tree in order of depth-first traversal.
+        """
+        return (node for node in self.iternodes() if node.is_end)
+
     def iternodes(self, **kwargs):
         """
         Yield each node during depth-first traversal of tree.
@@ -99,6 +130,12 @@ class ParseTree:
             for child in node.children:
                 for n in self.iternodes(node=child):
                     yield n
+                    
+    def iterwords(self):
+        """
+        Yield each word of the sentence in proper order.
+        """
+        return (node.word for node in self.iterendnodes())
 
     def search_by_tag(self, tag):
         """
@@ -115,7 +152,7 @@ class ParseTree:
                 matches.append(node)
                 
         return matches
-        
+
     def _build_from_lines(self, lines):
         """
         Lines expects list of strings that may or may not end in a newline.
@@ -154,3 +191,21 @@ class ParseTree:
                         match.group('tag'), match.group('word')
                     )
                     stripped = stripped[len(match.group()) - 1:]
+      
+    # TODO
+    # Currently each word is separated by a space. At minimum, punctuation
+    # should be accounted for.
+    @property
+    def sentence(self):
+        sentence = ''
+        
+        for i, node in enumerate(self.iterendnodes()):
+            if node.tag == 'PUNC':
+                sentence += node.word
+            elif i == 0:
+                sentence += node.word
+            else:
+                sentence += ' {0}'.format(node.word)
+                
+        return sentence
+            
