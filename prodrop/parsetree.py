@@ -135,7 +135,7 @@ class ParseTree:
         """
         Yield each word of the sentence in proper order.
         """
-        return (node.word for node in self.iterendnodes())
+        return (node.word for node in self.iterendnodes() if not node.tag == '-NONE-')
 
     def search_by_tag(self, tag):
         """
@@ -193,8 +193,8 @@ class ParseTree:
                     stripped = stripped[len(match.group()) - 1:]
       
     # TODO
-    # Currently each word is separated by a space. At minimum, punctuation
-    # should be accounted for.
+    # Currently each word is separated by a space, excluding punctuation.
+    # Must figure out Arabic rules.
     @property
     def sentence(self):
         sentence = ''
@@ -204,7 +204,7 @@ class ParseTree:
                 sentence += node.word
             elif i == 0:
                 sentence += node.word
-            else:
+            elif not node.tag == '-NONE-':
                 sentence += ' {0}'.format(node.word)
                 
         return sentence
