@@ -11,6 +11,7 @@ For each verb, report # associations with pro-drop and explicit subject
 QUESTIONS
 =========
 What does a hyphen in front of a word indicate? Example: (VP (PRT (VERB_PART -قَد))
+Also after a word. Example: (CONJ وَ-)
 
 What are the following "tag modifiers:"
   -#   NP-SBJ-2
