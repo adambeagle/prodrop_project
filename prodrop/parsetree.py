@@ -82,11 +82,11 @@ class ParseTree:
         .parse file.
         """
         self.top = None
-
-        self._build_from_lines(lines[:])
         
         join_char = '' if lines[0][-1] == '\n' else '\n'
         self.treebank_notation = join_char.join(lines)
+
+        self._build_from_lines(lines)
         
     def iternodes(self, **kwargs):
         """
