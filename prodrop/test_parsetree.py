@@ -149,6 +149,35 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
         self.assertEqual(node.tag, 'PUNC')
         self.assertEqual(node.word, '.')
     
+    def test_iternodes(self):
+        correct_tag_order = ('TOP', 'S', 'NP', 'NNP', 'VP', 'VPZ', 'NP', 'NNP', 'PUNC')
+        visited = 0
+        
+        for i, node in enumerate(self.tree.iternodes()):
+            visited += 1
+            self.assertEqual(node.tag, correct_tag_order[i])
+        
+        # The above loop may not raise an exception if some nodes were never yielded.
+        # This ensures each was actually visited.
+        self.assertEqual(visited, 9)
+            
+    def test_search_by_tag(self):
+        self.assertEqual(len(self.tree.search_by_tag('TOP')), 1)
+        self.assertEqual(len(self.tree.search_by_tag('S')), 1)
+        self.assertEqual(len(self.tree.search_by_tag('NP')), 2)
+        self.assertEqual(len(self.tree.search_by_tag('NNP')), 2)
+        self.assertEqual(len(self.tree.search_by_tag('VP')), 1)
+        self.assertEqual(len(self.tree.search_by_tag('VPZ')), 1)
+        self.assertEqual(len(self.tree.search_by_tag('PUNC')), 1)
+        
+        snode = self.tree.search_by_tag('S')[0]
+        self.assertEqual(len(snode.children), 3)
+        self.assertEqual(snode.parent.tag, 'TOP')
+        
+        vpznode = self.tree.search_by_tag('VPZ')[0]
+        self.assertEqual(vpznode.word, 'loves')
+        self.assertEqual(vpznode.parent.tag, 'VP')
+        
     
 ##############################################################################
 if __name__ == '__main__':

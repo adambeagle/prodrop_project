@@ -1,5 +1,5 @@
 """
-parse_tree.py
+parsetree.py
 Author: Adam Beagle
 
 PURPOSE:
@@ -39,6 +39,8 @@ class ParseTreeThruNode(ParseTreeNode):
         self._children = ()
         
     def add_child(self, child):
+        if not isinstance(child, ParseTreeNode):
+            raise TypeError()
         self._children += (child, )
         
     @property
@@ -67,12 +69,47 @@ class ParseTree:
     
     ATTRIBUTES:
       * top - The top-level tree node. This will always have the tag 'TOP'
+      
+    METHODS:
+      * iternodes
+      * search_by_tag
     """
     def __init__(self, lines):
-        """Expects list of strings 'lines.'"""
+        """
+        Expects list of strings 'lines' that represent a tree as given in a
+        .parse file.
+        """
         self.top = None
         
         self._build_from_lines(lines)
+        
+    def iternodes(self, **kwargs):
+        """
+        Yield each node during depth-first traversal of tree.
+        """
+        node = kwargs.get('node', self.top)
+        yield node
+
+        if isinstance(node, ParseTreeThruNode):
+            for child in node.children:
+                for n in self.iternodes(node=child):
+                    yield n
+
+    def search_by_tag(self, tag):
+        """
+        Return list of nodes with tag given by 'tag.'
+        
+        Currently returns only tags that are exact matches. 
+        TODO allow for base tag only search, etc.
+        TODO case-insensitive?
+        """
+        matches = []
+        
+        for node in self.iternodes():
+            if node.tag == tag:
+                matches.append(node)
+                
+        return matches
         
     def _build_from_lines(self, lines):
         """
@@ -88,6 +125,7 @@ class ParseTree:
             stripped = line.strip()
             
             while stripped:
+                # If closing a tag, move up to parent and continue
                 if stripped[0] == ')':
                     node = node.parent
                     stripped = stripped[1:]
@@ -111,4 +149,3 @@ class ParseTree:
                         match.group('tag'), match.group('word')
                     )
                     stripped = stripped[len(match.group()) - 1:]
-                        
