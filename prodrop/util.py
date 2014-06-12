@@ -10,6 +10,12 @@ from os import listdir
 from os.path import normpath, splitext
 import time
 
+from parsetree import ParseTree
+
+def build_first_tree_in_file(path):
+    for tree in itertrees(path):
+        return ParseTree(tree)
+
 def get_files_by_ext(directory, ext, prepend_dir=False):
     """
     Return list of files in 'directory' whose extensions match 'ext.'
