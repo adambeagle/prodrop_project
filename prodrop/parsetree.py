@@ -69,6 +69,8 @@ class ParseTree:
     
     ATTRIBUTES:
       * top - The top-level tree node. This will always have the tag 'TOP'
+      * treebank_notation - The Penn Treebank bracketed notation from which
+                            the tree was built.
       
     METHODS:
       * iternodes
@@ -80,8 +82,11 @@ class ParseTree:
         .parse file.
         """
         self.top = None
+
+        self._build_from_lines(lines[:])
         
-        self._build_from_lines(lines)
+        join_char = '' if lines[0][-1] == '\n' else '\n'
+        self.treebank_notation = join_char.join(lines)
         
     def iternodes(self, **kwargs):
         """
