@@ -116,30 +116,39 @@ class ParseTree:
                  the attribute.
     
     REMATCH    - Search phrase is assumed to be a regular expression
-                 pattern which is passed to re.match()
+                 pattern which is passed to re.match(). If re.match returns
+                 any Match object, the attribute is considered a match for
+                 the purpose of the search.
     """
     EXACT = 0
     INCLUDES = 1
     STARTSWITH = 2
     REMATCH = 3
     
-    def __init__(self, lines):
+    def __init__(self, lines, cache_end_nodes=False):
         """
         Expects list of strings 'lines' that represent a tree as given in a
         .parse file.
         """
         self.top = None
+        self._end_nodes = []
         
         join_char = '' if lines[0][-1] == '\n' else '\n'
         self.treebank_notation = join_char.join(lines)
 
         self._build_from_lines(lines)
+
+        if cache_end_nodes:
+            self._end_nodes = tuple(self.iterendnodes())
         
     def iterendnodes(self):
         """
         Yield each end node of tree in order of depth-first traversal.
         """
-        return (node for node in self.iternodes() if node.is_end)
+        if self._end_nodes:
+            return (node for node in self._end_nodes)
+        else:
+            return (node for node in self.iternodes() if node.is_end)
 
     def iternodes(self, **kwargs):
         """
