@@ -293,7 +293,21 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
             
         newtree = ParseTree(lines)
         self.assertEqual(self.rawdata, newtree.treebank_notation)
-        
+
+class ComplexArabicTreeTestCase(unittest.TestCase):
+    """
+    The file in this case begins with the BOM \ufeff character that is
+    automatically placed at the head of a file by some text editors.
+    """
+    def setUp(self):
+        path = '../treebank_data/sample_tree_large.parse'
+        with open(path, encoding='utf8') as f:
+            self.rawdata = f.read()
+
+        self.tree = ParseTree(self.rawdata.split('\n'))
+
+    def test_treebank_notation(self):
+        self.assertEqual(self.rawdata, self.tree.treebank_notation)
     
 ##############################################################################
 if __name__ == '__main__':

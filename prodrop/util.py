@@ -49,9 +49,7 @@ def itertreelines(filepath):
     
     with open(filepath, encoding='utf8') as f:
         current_tree_lines = []
-        for i, line in enumerate(f):
-            if i == 0 and line[0] == '\ufeff':
-                line = line[1:]
+        for line in f:
                 
             if line.startswith(start):
                 current_tree_lines = [line]

@@ -125,10 +125,18 @@ class ParseTree:
     STARTSWITH = 2
     REMATCH = 3
     
-    def __init__(self, lines, cache_end_nodes=False):
+    def __init__(self, lines, cache_end_nodes=True):
         """
         Expects list of strings 'lines' that represent a tree as given in a
         .parse file.
+
+        Caching of end nodes is on by default. The speed of searches involving
+        'word' attributes is GREATLY increased with caching turned on. The only
+        reason to turn off caching is if you are doing a single search per
+        tree, or none of your searches involve the 'word' attribute (and even
+        then the time difference to leave caching on will be miniscule unless
+        a corpus contains >10000 trees, in which case it may add a few seconds
+        of execution time).
         """
         self.top = None
         self._end_nodes = []
@@ -203,7 +211,6 @@ class ParseTree:
         """
         # Create top node
         self.top = ParseTreeThruNode(None, 'TOP')
-        lines[0] = lines[0][5:] # Ignore '(TOP ' in first line
         
         # Build tree line by line
         node = self.top
@@ -216,11 +223,15 @@ class ParseTree:
                     node = node.parent
                     stripped = stripped[1:]
                     continue
+                elif stripped[0] == '\ufeff': # Skip BOM character
+                    stripped = stripped[1:]
             
                 match = re.match(thrunode_pattern, stripped)
                 
                 if match is not None:
-                    node = ParseTreeThruNode(node, match.group('tag'))
+                    tag = match.group('tag')
+                    if not tag == 'TOP':
+                        node = ParseTreeThruNode(node, tag)
                     stripped = stripped[len(match.group()) - 1:]
                 else:
                     match = re.match(endnode_pattern, stripped)
