@@ -38,10 +38,10 @@ def get_files_by_ext(directory, ext, prepend_dir=False):
 
     return files
 
-def itertrees(filepath):
+def itertreelines(filepath):
     """
-    Yield each tree of the .parse file given by 'path' as a
-    parsetree.ParseTree object.
+    Yield each set of lines from .parse file given by filepath that
+    represent a single parse tree.
     """
     start = '(TOP '
     end = '\n'
@@ -49,17 +49,28 @@ def itertrees(filepath):
     
     with open(filepath, encoding='utf8') as f:
         current_tree_lines = []
-        for line in f:
+        for i, line in enumerate(f):
+            if i == 0 and line[0] == '\ufeff':
+                line = line[1:]
+                
             if line.startswith(start):
                 current_tree_lines = [line]
             elif not line.startswith(end):
                 current_tree_lines.append(line)
             else:
                 if current_tree_lines:
-                    yield ParseTree(current_tree_lines)
+                    yield current_tree_lines
                     current_tree_lines = []
 
-def itertrees_dir(path):
+def itertrees(filepath, cache_end_nodes=1):
+    """
+    Yield each tree of the .parse file given by 'path' as a
+    parsetree.ParseTree object.
+    """
+    for treelines in itertreelines(filepath):
+        yield ParseTree(treelines, cache_end_nodes)
+
+def itertrees_dir(path, **kwargs):
     """
     Yield every parse tree of every .parse file found in the directory
     given by path. Trees are yielded as parsetree.ParseTree objects.
@@ -67,7 +78,7 @@ def itertrees_dir(path):
     .parse files in nested directories of path are not searched.
     """
     for filepath in get_files_by_ext(path, '.parse', prepend_dir=True):
-        for tree in itertrees(filepath):
+        for tree in itertrees(filepath, **kwargs):
             yield tree
 
 ################################################################################

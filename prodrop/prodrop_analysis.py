@@ -31,7 +31,7 @@ if __name__ == '__main__':
     with Timer() as timer:
         count = 0
         prodrop_count = 0
-        for tree in itertrees_dir(TREEBANK_DATA_PATH):
+        for tree in itertrees_dir(TREEBANK_DATA_PATH, cache_end_nodes=0):
             prodrop_count += len(get_prodrops(tree))
             count +=1
 
