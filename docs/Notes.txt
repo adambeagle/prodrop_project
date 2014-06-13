@@ -6,19 +6,27 @@ For each verb, report # associations with pro-drop and explicit subject
 
 *T* in e.g. (NP-SBJ (-NONE- *T*-1)) means the subject is explicit in the sentence but preceded the verb.
 
+CURRENT GOAL
+============
+Find all (-NONE- *) nodes that are children of NP-SBJ or a variant.
+For each pro-drop node, find the associated verb.
+	For now, assume associated verb has some variant of an IV tag.
+	Ignore (and report?) otherwise.
+
+NOTES
+=====
+Ignore all tag modifiers (-#, =, +, etc.)
+Ignore - in front of words (strip?)
+
+Associated verbs' tags are variants of IV
+
+CONJ is a link to previous sentence?
+
+"Main verb" variations:
+	(NOUN.VN+NSUFF_FEM_SG+CASE_DEF_GEN -مُشارَكَةِ)
+	(PV+PVSUFF_SUBJ:3MS -أَوْضَحَ)
+	(DET+NOUN.VN+CASE_DEF_ACC الدِفاعَ)
 
 
 QUESTIONS
 =========
-What does a hyphen in front of a word indicate? Example: (VP (PRT (VERB_PART -قَد))
-Also after a word. Example: (CONJ وَ-)
-
-What are the following "tag modifiers:"
-  -#   NP-SBJ-2
-  -#-# NP-SBJ-3-6
-  =#   NP-SBJ=7
-  +    ADJ+CASE_INDEF_ACC
-  :    PV+PVSUFF_SUBJ:3MS
-  _    DET+NOUN+CASE_DEF_NOM
-
-What is a -# on a * mean? Example: (-NONE- *-2)

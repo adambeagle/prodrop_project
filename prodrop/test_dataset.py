@@ -11,12 +11,16 @@ PURPOSE:
     data is added to the project.
     
 TODO:
-    * Test that a tag NEVER contains whitespace.
+    * Verify the assumed (tag word) format. Specifically, test that an end
+      node only ever contains a single space, which can be assumed to separate
+      the tag and the word.
 """
 import unittest
+
+from constants import TREEBANK_DATA_PATH
 from util import get_files_by_ext
 
-INPUT_DIR = '../treebank_data/00' # TODO allow multi-directory walk from root
+INPUT_DIR = TREEBANK_DATA_PATH
 
 class TestTreeStart(unittest.TestCase):
     """ """
