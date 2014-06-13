@@ -13,13 +13,14 @@ DESCRIPTION:
 """
 from os.path import basename
 
+from constants import TREEBANK_DATA_PATH
 from exceptions import MissingParseFilesError
 from util import get_files_by_ext, itertrees
 
-INPUT_PATH = '../treebank_data/00/'
+INPUT_PATH = TREEBANK_DATA_PATH
 OUTFILE = 'simple_trees.txt'
-MAX_LINES = 8
-MAX_TREES = 25
+MAX_LINES = 6
+MAX_TREES = 999
 
 def phrase_in_tree(tree, phrase):
     """
