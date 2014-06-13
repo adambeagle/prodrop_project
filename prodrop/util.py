@@ -12,10 +12,6 @@ import time
 
 from parsetree import ParseTree
 
-def build_first_tree_in_file(path):
-    for tree in itertrees(path):
-        return ParseTree(tree)
-
 def get_files_by_ext(directory, ext, prepend_dir=False):
     """
     Return list of files in 'directory' whose extensions match 'ext.'
@@ -42,37 +38,55 @@ def get_files_by_ext(directory, ext, prepend_dir=False):
 
     return files
 
-def itertrees(path):
+def itertrees(filepath):
     """
-    Yield each tree of the .parse file given by 'path.'
-    Trees are given as lists of strings.
+    Yield each tree of the .parse file given by 'path' as a
+    parsetree.ParseTree object.
     """
     start = '(TOP '
     end = '\n'
-    current_tree = []
+    current_tree_lines = []
     
-    with open(path, encoding='utf8') as f:
+    with open(filepath, encoding='utf8') as f:
+        current_tree_lines = []
         for line in f:
             if line.startswith(start):
-                current_tree = [line]
+                current_tree_lines = [line]
             elif not line.startswith(end):
-                current_tree.append(line)
+                current_tree_lines.append(line)
             else:
-                if current_tree:
-                    yield current_tree
-                    current_tree = []
+                if current_tree_lines:
+                    yield ParseTree(current_tree_lines)
+                    current_tree_lines = []
+
+def itertrees_dir(path):
+    """
+    Yield every parse tree of every .parse file found in the directory
+    given by path. Trees are yielded as parsetree.ParseTree objects.
+
+    .parse files in nested directories of path are not searched.
+    """
+    for filepath in get_files_by_ext(path, '.parse', prepend_dir=True):
+        for tree in itertrees(filepath):
+            yield tree
 
 ################################################################################
+class TimerError(Exception):
+    pass
+
 class Timer():
     """
     Defines a timer that can be used as part of a 'with' statement
     to time any block of code.
 
     ATTRIBUTES:
-      * interval (read-only)
+      * elapsed_time (read-only)
+      * total_time (read-only)
     """
     def __init__(self):
-        self._interval = 0
+        self._startTime = None
+        self._endTime = None
+        self._interval = None
 
     def __enter__(self):
         self._startTime = time.clock()
@@ -83,5 +97,16 @@ class Timer():
         self._interval = self._endTime - self._startTime
 
     @property
-    def interval(self):
+    def elapsed_time(self):
+        """Return time elapsed (in sec) since the timer was entered."""
+        try:
+            return time.clock() - self._startTime
+        except TypeError:
+            raise TimerError(
+                'Timer must be started before elapsed_time can have a value.'
+            )
+
+    @property
+    def total_time(self):
+        """Return total time from enter to exit of timer, in seconds."""
         return self._interval
