@@ -5,6 +5,7 @@ Author: Adam Beagle
 import re
 import unittest
 
+from exceptions import SearchFlagError
 from parsetree import (endnode_pattern, ParseTree, 
     ParseTreeEndNode, ParseTreeThruNode, thrunode_pattern)
 
@@ -122,16 +123,6 @@ class SimpleArabicTreeTestCase(unittest.TestCase):
         # This ensures each was actually visited.
         self.assertEqual(visited, len(correct_tag_order))
         
-    def test_search_by_tag(self):
-        results = self.tree.search_by_tag('IV3FS+IV+IVSUFF_MOOD:I')
-        
-        self.assertEqual(len(results), 1)
-        node = results[0]
-        self.assertIsInstance(node, ParseTreeEndNode)
-        self.assertEqual(node.parent.tag, 'VP')
-        self.assertEqual(node.parent.parent.tag, 'SQ')
-        self.assertEqual(node.word, '-تُسَيْطِرُ')
-        
     def test_treebank_notation(self):
         self.assertEqual(self.rawdata, self.tree.treebank_notation)
         
@@ -228,25 +219,65 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
         
         for word, correct_word in zip(self.tree.iterwords(), correct_words):
             self.assertEqual(word, correct_word)
-            
-    def test_search_by_tag(self):
-        self.assertEqual(len(self.tree.search_by_tag('TOP')), 1)
-        self.assertEqual(len(self.tree.search_by_tag('S')), 1)
-        self.assertEqual(len(self.tree.search_by_tag('NP')), 2)
-        self.assertEqual(len(self.tree.search_by_tag('NNP')), 2)
-        self.assertEqual(len(self.tree.search_by_tag('VP')), 1)
-        self.assertEqual(len(self.tree.search_by_tag('VPZ')), 1)
-        self.assertEqual(len(self.tree.search_by_tag('PUNC')), 1)
-        
-        snode = self.tree.search_by_tag('S')[0]
-        self.assertIsInstance(snode, ParseTreeThruNode)
-        self.assertEqual(len(snode.children), 3)
-        self.assertEqual(snode.parent.tag, 'TOP')
-        
-        vpznode = self.tree.search_by_tag('VPZ')[0]
-        self.assertIsInstance(vpznode, ParseTreeEndNode)
-        self.assertEqual(vpznode.word, 'loves')
-        self.assertEqual(vpznode.parent.tag, 'VP')
+
+    # TODO test REMATCH flag
+    def test_search(self):
+        t = self.tree
+
+        # SUCCESSES
+        matches = t.search(tag='TOP')
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].tag, 'TOP')
+
+        matches = t.search(tag='NNP', tag_flag=t.EXACT)
+        self.assertEqual(len(matches), 2)
+        for m in matches:
+            self.assertEqual(m.tag, 'NNP')
+        self.assertNotEqual(matches[0].word, matches[1].word)
+
+        matches = t.search(word='J', word_flag=t.STARTSWITH)
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].word, 'John')
+
+        matches = t.search(tag='NP', word='ar', tag_flag=t.INCLUDES, word_flag=t.INCLUDES)
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].word, 'Mary')
+
+        matches = t.search(tag='S', tag_flag=t.INCLUDES)
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].tag, 'S')
+
+        matches = t.search(tag='VP', tag_flag=t.INCLUDES)
+        self.assertEqual(len(matches), 2)
+        self.assertEqual(matches[0].tag, 'VP')
+        self.assertEqual(matches[1].tag, 'VPZ')
+
+        matches = t.search(tag='VP', tag_flag=t.STARTSWITH)
+        self.assertEqual(len(matches), 2)
+        self.assertEqual(matches[0].tag, 'VP')
+        self.assertEqual(matches[1].tag, 'VPZ')
+
+        matches = t.search(tag='VP', tag_flag=t.EXACT)
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].tag, 'VP')
+
+        matches = t.search(word='.')
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].tag, 'PUNC')
+        self.assertEqual(matches[0].word, '.')
+
+        # FAILURES
+        matches = t.search(tag='NP', word='John')
+        self.assertFalse(matches)
+
+        with self.assertRaises(SearchFlagError) as cm:
+            matches = t.search(tag='S', tag_flag='INCLUDES')
+
+        with self.assertRaises(SearchFlagError) as cm:
+            matches = t.search(tag='S', tag_flag=-5)
+
+        with self.assertRaises(SearchFlagError) as cm:
+            matches = t.search(tag='S', tag_flag=15)
         
     def test_sentence(self):
         self.assertEqual(self.tree.sentence, 'John loves Mary.')

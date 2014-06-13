@@ -1,7 +1,10 @@
+class MissingParseFilesError(Exception):
+    pass
+
 class NoTreesFoundError(Exception):
     pass
 
-class MissingParseFilesError(Exception):
+class SearchFlagError(Exception):
     pass
 
 class TreeConstructionError(Exception):

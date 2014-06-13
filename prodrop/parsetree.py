@@ -8,26 +8,7 @@ PURPOSE:
 """
 import re
 
-from exceptions import TreeConstructionError
-   
-# SEARCH FLAGS
-# =============================================================================
-# Each style of flag below has a TAG and a WORD variant.
-#
-# *_INCLUDES   - Search phrase appears anywhere in the attribute, exactly as
-#                written.
-#
-# *_STARTSWITH - Search phrase appears at the start of the attribute. exactly
-#                as written.
-#
-# *_RE_MATCH   - Search phrase is assumed to be a regular expression pattern
-#                which is passed to re.match()
-TAG_INCLUDES = 0 
-WORD_INCLUDES = 1
-TAG_STARTSWITH = 2
-WORD_STARTSWITH = 3
-TAG_RE_MATCH = 4
-WORD_RE_MATCH = 5
+from exceptions import SearchFlagError, TreeConstructionError
 
 # Regex patterns for building from .parse files.
 # Placed here so they are available to tests.
@@ -103,14 +84,12 @@ class ParseTreeEndNode(ParseTreeNode):
 
 class ParseTree:
     """
-    Defines a rudimentary syntactic parse tree built from Penn Treebank
-    bracketed notation as found in .parse files.
+    Defines a syntactic parse tree built from Penn Treebank bracketed notation
+    as found in .parse files.
     
     Nodes are either ParseTreeThruNode or ParseTreeEndNode, defined above and
     have 'children' and 'word' attributes, respectively. All nodes have a 
     'parent' attribute.
-    
-    TODO improved navigation and searching. 
     
     ATTRIBUTES:
       * sentence
@@ -119,9 +98,31 @@ class ParseTree:
                             the tree was built.
       
     METHODS:
+      * iterendnodes
       * iternodes
-      * search_by_tag
+      * search
+
+    SEARCH FLAGS
+    =========================================================================
+    The following flags may be passed to ParseTree.search() to modify how a
+    search is performed for a tag or word. See search() for more information.
+
+    EXACT      - Search phrase matches an attribute exactly.
+    
+    INCLUDES   - Search phrase, exactly as written, appears anywhere in the
+                 attribute at least once.
+    
+    STARTSWITH - Search phrase, exactly as written, appears at the start of
+                 the attribute.
+    
+    REMATCH    - Search phrase is assumed to be a regular expression
+                 pattern which is passed to re.match()
     """
+    EXACT = 0
+    INCLUDES = 1
+    STARTSWITH = 2
+    REMATCH = 3
+    
     def __init__(self, lines):
         """
         Expects list of strings 'lines' that represent a tree as given in a
@@ -158,35 +159,34 @@ class ParseTree:
         """
         return (node.word for node in self.iterendnodes() if not node.tag == '-NONE-')
 
-    def search(self, tag=None, word=None, *flags):
+    def search(self, tag=None, word=None, tag_flag=0, word_flag=0):
         """
         Return list of nodes matching parameters.
 
         No constraint is placed on a field that evaluates to False, i.e. calling
         with tag='PREP' and word='' with no flags will return every node whose
-        tag is exactly 'PREP.' If both tag and word evaluate to False, every node
+        tag is exactly PREP. If both tag and word evaluate to False, every node
         in the tree will be returned.
 
-        Flags are defined at the top of this file. The default style of search
-        is an exact match. 
-        """
-        raise NotImplementedError()
+        Flags are defined at the top of this file. If no flag is passed for an
+        attribute, the default style of search is exact match.
 
-    def search_by_tag(self, tag):
+        All searches case-sensitive for the time being.
         """
-        Return list of nodes with tag given by 'tag.'
+        results = []
         
-        Currently returns only tags that are exact matches. 
-        TODO allow for base tag only search, etc.
-        TODO case-insensitive?
-        """
-        matches = []
-        
-        for node in self.iternodes():
-            if node.tag == tag:
-                matches.append(node)
-                
-        return matches
+        tagfunc, wordfunc = self._get_comparison_functions(tag_flag, word_flag)
+
+        if word:
+            for node in self.iterendnodes():
+                if tagfunc(tag, node.tag) and wordfunc(word, node.word):
+                    results.append(node)
+        else:
+            for node in self.iternodes():
+                if tagfunc(tag, node.tag):
+                    results.append(node)
+
+        return results
 
     def _build_from_lines(self, lines):
         """
@@ -226,7 +226,46 @@ class ParseTree:
                         match.group('tag'), match.group('word')
                     )
                     stripped = stripped[len(match.group()) - 1:]
-      
+
+    def _get_comparison_functions(self, tag_flag, word_flag):
+        """
+        Return the comparison functions for tag and word to be used in
+        search(), in that order.
+
+        The comparisons all have the signature (phrase, s)
+        """
+        exact = lambda phrase, s: phrase == s if phrase else True
+        includes = lambda phrase, s: phrase in s
+        startswith = lambda phrase, s: s.startswith(phrase)
+        rematch = lambda pattern, s: re.match(pattern, s)
+
+        funcmap = {
+            self.EXACT : exact,
+            self.INCLUDES : includes,
+            self.STARTSWITH : startswith,
+            self.REMATCH : rematch
+        }
+
+        try:
+            tagfunc = funcmap[tag_flag]
+        except KeyError:
+            raise SearchFlagError(
+                'Invalid flag passed for tag_flag: {0}\n'.format(tag_flag) +
+                'Use the named constants in the ParseTree class (e.g. ' +
+                'ParseTree.INCLUDES, ParseTree.EXACT) as flags.'
+            )
+
+        try:
+            wordfunc = funcmap[word_flag]
+        except KeyError:
+            raise SearchFlagError(
+                'Invalid flag passed for word_flag: {0}\n'.format(word_flag) +
+                'Only the named constants in the ParseTree class (e.g. ' +
+                'ParseTree.INCLUDES, ParseTree.EXACT) should be used as flags.'
+            )
+
+        return tagfunc, wordfunc
+
     # TODO
     # Currently each word is separated by a space, excluding punctuation.
     # Must figure out Arabic rules.
