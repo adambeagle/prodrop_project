@@ -9,12 +9,8 @@ PURPOSE:
 
     The tests should be re-run and verified to pass whenever new treebank
     data is added to the project.
-    
-TODO:
-    * Verify the assumed (tag word) format. Specifically, test that an end
-      node only ever contains a single space, which can be assumed to separate
-      the tag and the word.
 """
+import re
 import unittest
 
 from constants import TREEBANK_DATA_PATH
@@ -22,12 +18,43 @@ from util import get_files_by_ext
 
 INPUT_DIR = TREEBANK_DATA_PATH
 
-class TestTreeStart(unittest.TestCase):
+class TestTreebankDataset(unittest.TestCase):
     """ """
     parse_files = get_files_by_ext(INPUT_DIR, '.parse', prepend_dir=True)
-    
+    endnode_pattern = '\([^()]+\)'
+
+    def test_endnode_single_space(self):
+        match_found = False
+        
+        for path in self.parse_files:
+            with open(path, encoding='utf8') as f:
+                for line in f:
+                    match = re.search(self.endnode_pattern, line)
+                    if match:
+                        match_found = True
+                        self.assertEqual(match.group().count(' '), 1)
+
+        # Helps ensure test was actually run as expected
+        self.assertTrue(match_found)
+                    
+    def test_endnode_pattern(self):
+        """Test self.endnode_pattern"""
+        def single_test(string, group):
+            match = re.search(self.endnode_pattern, string)
+            self.assertIsNotNone(match)
+            self.assertEqual(match.group(), group)
+
+        single_test('(NP-SBJ (-NONE- *))', '(-NONE- *)')
+        single_test('(NP-OBJ (NP (NOUN kitten)', '(NOUN kitten)')
+        single_test('(NP-OBJ (NP (NOUN كرازه)', '(NOUN كرازه)')
+        single_test('\t\t\t    (DET+ADJ+CASE_DEF_ACC المَزْهُوَّ))',
+            '(DET+ADJ+CASE_DEF_ACC المَزْهُوَّ)'
+        )
+        single_test('        (PUNC .)))', '(PUNC .)')
+        single_test('(TOP (S (CONJ وَ-)', '(CONJ وَ-)')
+
     def test_parse_files(self):
-        """Verify .parse files discovered."""
+        """Verify at least one .parse file was discovered."""
         self.assertTrue(self.parse_files)
 
     def test_top_token_uniqueness(self):
