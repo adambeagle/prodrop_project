@@ -10,6 +10,27 @@ import re
 
 from exceptions import TreeConstructionError
    
+# SEARCH FLAGS
+# =============================================================================
+# Each style of flag below has a TAG and a WORD variant.
+#
+# *_INCLUDES   - Search phrase appears anywhere in the attribute, exactly as
+#                written.
+#
+# *_STARTSWITH - Search phrase appears at the start of the attribute. exactly
+#                as written.
+#
+# *_RE_MATCH   - Search phrase is assumed to be a regular expression pattern
+#                which is passed to re.match()
+TAG_INCLUDES = 0 
+WORD_INCLUDES = 1
+TAG_STARTSWITH = 2
+WORD_STARTSWITH = 3
+TAG_RE_MATCH = 4
+WORD_RE_MATCH = 5
+
+# Regex patterns for building from .parse files.
+# Placed here so they are available to tests.
 thrunode_pattern = r'^\((?P<tag>\S+) \('
 endnode_pattern = r'^\((?P<tag>\S+) (?P<word>[^\s()]+)\)'
 
@@ -136,6 +157,20 @@ class ParseTree:
         Yield each word of the sentence in proper order.
         """
         return (node.word for node in self.iterendnodes() if not node.tag == '-NONE-')
+
+    def search(self, tag=None, word=None, *flags):
+        """
+        Return list of nodes matching parameters.
+
+        No constraint is placed on a field that evaluates to False, i.e. calling
+        with tag='PREP' and word='' with no flags will return every node whose
+        tag is exactly 'PREP.' If both tag and word evaluate to False, every node
+        in the tree will be returned.
+
+        Flags are defined at the top of this file. The default style of search
+        is an exact match. 
+        """
+        raise NotImplementedError()
 
     def search_by_tag(self, tag):
         """
