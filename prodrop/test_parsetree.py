@@ -299,6 +299,45 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
 
         with self.assertRaises(SearchFlagError) as cm:
             matches = t.search(tag='S', tag_flag=15)
+
+    def test_search_parent(self):
+        """Test searching with parent_tag and parent_flag"""
+        t = self.tree
+
+        matches = t.search(tag='TOP', parent_tag='.+', parent_flag=t.REMATCH)
+        self.assertEqual(len(matches), 0)
+
+        matches = t.search(tag='S', parent_tag='TOP')
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].tag, 'S')
+        self.assertEqual(matches[0].parent.tag, 'TOP')
+
+        matches = t.search(parent_tag='S', parent_flag=t.STARTSWITH)
+        for node in matches:
+            self.assertEqual(node.parent.tag, 'S')
+        self.assertEqual(len(matches), 3)
+        self.assertEqual(matches[0].tag, 'NP')
+        self.assertEqual(matches[1].tag, 'VP')
+        self.assertEqual(matches[2].tag, 'PUNC')
+        
+        matches = t.search(parent_tag='VP', word='o', word_flag=t.CONTAINS)
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].tag, 'VPZ')
+        self.assertEqual(matches[0].word, 'loves')
+
+        matches = t.search(parent_tag='P', parent_flag=t.CONTAINS)
+        for node in matches:
+            self.assertTrue('P' in node.parent.tag)
+        self.assertEqual(len(matches), 5)
+        self.assertEqual(matches[0].tag, 'S')
+        self.assertEqual(matches[1].tag, 'NNP')
+        self.assertEqual(matches[1].word, 'John')
+        self.assertEqual(matches[2].tag, 'VPZ')
+        self.assertEqual(matches[2].word, 'loves')
+        self.assertEqual(matches[3].tag, 'NP')
+        self.assertEqual(matches[3].parent.tag, 'VP')
+        self.assertEqual(matches[4].tag, 'NNP')
+        self.assertEqual(matches[4].word, 'Mary')
         
     def test_sentence(self):
         self.assertEqual(self.tree.sentence, 'John loves Mary.')

@@ -132,6 +132,7 @@ class ParseTree:
                  any Match object, the attribute is considered a match for
                  the purpose of the search.
     """
+    # WARNING: EXACT must remain 0 to remain default.
     EXACT = 0
     CONTAINS = 1
     STARTSWITH = 2
@@ -203,6 +204,7 @@ class ParseTree:
         """
         return (node.word for node in self.iterendnodes() if not node.tag == '-NONE-')
 
+    # TODO make pretty again :(
     def search(self, tag=None, word=None, tag_flag=0, word_flag=0, **kwargs):
         """
         Return list of nodes matching parameters.
@@ -222,14 +224,26 @@ class ParseTree:
         tagfunc = self._get_comparison_function(tag_flag)
         wordfunc = self._get_comparison_function(word_flag)
 
+        parent_tag = kwargs.get('parent_tag', None)
+        parent_flag = kwargs.get('parent_flag', 0)
+        parentfunc = self._get_comparison_function(parent_flag)
+
         if word:
             for node in self.iterendnodes():
                 if tagfunc(tag, node.tag) and wordfunc(word, node.word):
-                    results.append(node)
+                    if parent_tag and node.parent is not None:
+                        if parentfunc(parent_tag, node.parent.tag):
+                            results.append(node)
+                    elif not parent_tag:
+                        results.append(node)
         else:
             for node in self.iternodes():
                 if tagfunc(tag, node.tag):
-                    results.append(node)
+                    if parent_tag and node.parent is not None:
+                        if parentfunc(parent_tag, node.parent.tag):
+                            results.append(node)
+                    elif not parent_tag:
+                        results.append(node)
 
         return results
 
