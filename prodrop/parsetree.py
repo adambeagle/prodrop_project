@@ -40,6 +40,12 @@ class ParseTreeThruNode(ParseTreeNode):
     """
     ATTRIBUTES:
       * children (read-only)
+
+    INHERITED ATTRIBUTES:
+      * has_children
+      * is_end
+      * parent
+      * tag
       
     METHODS:
       * add_child
@@ -69,6 +75,12 @@ class ParseTreeEndNode(ParseTreeNode):
     """
     ATTRIBUTES:
       * word
+
+    INHERITED ATTRIBUTES:
+      * has_children
+      * is_end
+      * parent
+      * tag
     """
     def __init__(self, parent, tag, word):
         super().__init__(parent, tag)
@@ -109,7 +121,7 @@ class ParseTree:
 
     EXACT      - Search phrase matches an attribute exactly.
     
-    INCLUDES   - Search phrase, exactly as written, appears anywhere in the
+    CONTAINS   - Search phrase, exactly as written, appears anywhere in the
                  attribute at least once.
     
     STARTSWITH - Search phrase, exactly as written, appears at the start of
@@ -121,7 +133,7 @@ class ParseTree:
                  the purpose of the search.
     """
     EXACT = 0
-    INCLUDES = 1
+    CONTAINS = 1
     STARTSWITH = 2
     REMATCH = 3
     
@@ -148,6 +160,21 @@ class ParseTree:
 
         if cache_end_nodes:
             self._end_nodes = tuple(self.iterendnodes())
+
+    def get_siblings(self, node):
+        """
+        Yield each sibling of a node, i.e. other nodes that have the same
+        parent.
+        """
+        parent = node.parent
+
+        if parent is None:
+            return
+
+        if len(parent.children) > 1:
+            for child in parent.children:
+                if not child == node:
+                    yield child
         
     def iterendnodes(self):
         """
@@ -176,7 +203,7 @@ class ParseTree:
         """
         return (node.word for node in self.iterendnodes() if not node.tag == '-NONE-')
 
-    def search(self, tag=None, word=None, tag_flag=0, word_flag=0):
+    def search(self, tag=None, word=None, tag_flag=0, word_flag=0, **kwargs):
         """
         Return list of nodes matching parameters.
 
@@ -185,14 +212,15 @@ class ParseTree:
         tag is exactly PREP. If both tag and word evaluate to False, every node
         in the tree will be returned.
 
-        Flags are defined at the top of this file. If no flag is passed for an
-        attribute, the default style of search is exact match.
+        Flags are documented in the docstring of this class. If no flag is
+        passed for an attribute, the default style of search is exact match.
 
-        All searches case-sensitive for the time being.
+        All searches are case-sensitive for the time being.
         """
         results = []
         
-        tagfunc, wordfunc = self._get_comparison_functions(tag_flag, word_flag)
+        tagfunc = self._get_comparison_function(tag_flag)
+        wordfunc = self._get_comparison_function(word_flag)
 
         if word:
             for node in self.iterendnodes():
@@ -247,7 +275,7 @@ class ParseTree:
                     )
                     stripped = stripped[len(match.group()) - 1:]
 
-    def _get_comparison_functions(self, tag_flag, word_flag):
+    def _get_comparison_function(self, flag):
         """
         Return the comparison functions for tag and word to be used in
         search(), in that order.
@@ -255,36 +283,27 @@ class ParseTree:
         The comparisons all have the signature (phrase, s)
         """
         exact = lambda phrase, s: phrase == s if phrase else True
-        includes = lambda phrase, s: phrase in s
+        contains = lambda phrase, s: phrase in s
         startswith = lambda phrase, s: s.startswith(phrase)
         rematch = lambda pattern, s: re.match(pattern, s)
 
         funcmap = {
             self.EXACT : exact,
-            self.INCLUDES : includes,
+            self.CONTAINS : contains,
             self.STARTSWITH : startswith,
             self.REMATCH : rematch
         }
 
         try:
-            tagfunc = funcmap[tag_flag]
+            comparison_func = funcmap[flag]
         except KeyError:
             raise SearchFlagError(
-                'Invalid flag passed for tag_flag: {0}\n'.format(tag_flag) +
+                'Invalid flag passed for flag: {0}\n'.format(flag) +
                 'Use the named constants in the ParseTree class (e.g. ' +
-                'ParseTree.INCLUDES, ParseTree.EXACT) as flags.'
+                'ParseTree.CONTAINS, ParseTree.EXACT) as flags.'
             )
 
-        try:
-            wordfunc = funcmap[word_flag]
-        except KeyError:
-            raise SearchFlagError(
-                'Invalid flag passed for word_flag: {0}\n'.format(word_flag) +
-                'Only the named constants in the ParseTree class (e.g. ' +
-                'ParseTree.INCLUDES, ParseTree.EXACT) should be used as flags.'
-            )
-
-        return tagfunc, wordfunc
+        return comparison_func
 
     # TODO
     # Currently each word is separated by a space, excluding punctuation.
@@ -302,4 +321,3 @@ class ParseTree:
                 sentence += ' {0}'.format(node.word)
                 
         return sentence
-            

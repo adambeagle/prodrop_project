@@ -189,6 +189,25 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
         node = node.children[2]
         self.assertEqual(node.tag, 'PUNC')
         self.assertEqual(node.word, '.')
+
+    def test_get_siblings(self):
+        tree = self.tree
+        
+        def test_no_siblings(node):
+            sibs = tuple(tree.get_siblings(node))
+            self.assertEqual(sibs, ())
+            for sib in tree.get_siblings(node):
+                raise AssertionError("{0} should have no siblings.".format(
+                    node.tag
+                ))
+
+        test_no_siblings(tree.top)
+        test_no_siblings(tree.search(tag='S')[0])
+        for node in tree.search(tag='NNP'):
+            test_no_siblings(node)
+
+        # TODO finish
+        
         
     def test_iterendnodes(self):
         correct_tag_order = ('NNP', 'VPZ', 'NNP', 'PUNC')
@@ -239,15 +258,17 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0].word, 'John')
 
-        matches = t.search(tag='NP', word='ar', tag_flag=t.INCLUDES, word_flag=t.INCLUDES)
+        matches = t.search(tag='NP', word='ar',
+            tag_flag=t.CONTAINS, word_flag=t.CONTAINS
+        )
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0].word, 'Mary')
 
-        matches = t.search(tag='S', tag_flag=t.INCLUDES)
+        matches = t.search(tag='S', tag_flag=t.CONTAINS)
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0].tag, 'S')
 
-        matches = t.search(tag='VP', tag_flag=t.INCLUDES)
+        matches = t.search(tag='VP', tag_flag=t.CONTAINS)
         self.assertEqual(len(matches), 2)
         self.assertEqual(matches[0].tag, 'VP')
         self.assertEqual(matches[1].tag, 'VPZ')
