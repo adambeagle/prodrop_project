@@ -12,7 +12,13 @@ class ParseTreeError(Exception):
     """Base class for all parse tree related errors."""
     pass
 
-class SearchFlagError(ParseTreeError):
+class ParseTreeSearchError(ParseTreeError):
+    pass
+
+class SearchFlagError(ParseTreeSearchError):
+    pass
+
+class CustomCallableError(ParseTreeSearchError):
     pass
 
 class TreeConstructionError(ParseTreeError):

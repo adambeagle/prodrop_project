@@ -8,7 +8,9 @@ PURPOSE:
 """
 import re
 
-from exceptions import SearchFlagError, TreeConstructionError
+from exceptions import (CustomCallableError, SearchFlagError,
+    TreeConstructionError
+)
 
 # Regex patterns for building from .parse files.
 # Placed here so they are available to tests.
@@ -117,7 +119,8 @@ class ParseTree:
     SEARCH FLAGS
     =========================================================================
     The following flags may be passed to ParseTree.search() to modify how a
-    search is performed for a tag or word. See search() for more information.
+    search is performed for a tag, word, or parent.
+    See search() for more information.
 
     EXACT      - Search phrase matches an attribute exactly.
     
@@ -131,12 +134,25 @@ class ParseTree:
                  pattern which is passed to re.match(). If re.match returns
                  any Match object, the attribute is considered a match for
                  the purpose of the search.
+
+    CUSTOM     - A user-passed callable that will be used for the comparison.
+                 Must be passed as a named argument called (name)_func, where
+                 (name) is replaced by the name of the attribute the CUSTOM
+                 flag was set for. For example, if tag_flag is set to CUSTOM,
+                 then "tag_func" must be a named argument to the search method.
+                 A custom comparison function is assumed to accept two strings,
+                 the first the search phrase and the second the attribute
+                 (i.e. the current node's tag, word, or parent's tag), and to
+                 return a boolean representing a valid or invalid match. If
+                 (name)_func is not passed or is not callable,
+                 CustomCallableError will be raised.
     """
     # WARNING: EXACT must remain 0 to remain default.
     EXACT = 0
     CONTAINS = 1
     STARTSWITH = 2
     REMATCH = 3
+    CUSTOM = 4
     
     def __init__(self, lines, cache_end_nodes=True):
         """
@@ -204,7 +220,7 @@ class ParseTree:
         """
         return (node.word for node in self.iterendnodes() if not node.tag == '-NONE-')
 
-    def search(self, tag=None, word=None, tag_flag=0, word_flag=0, **kwargs):
+    def search(self, tag='', word='', tag_flag=0, word_flag=0, **kwargs):
         """
         Return list of nodes matching parameters.
 
@@ -218,15 +234,20 @@ class ParseTree:
 
         All searches are case-sensitive for the time being.
         """
-        tagfunc = self._get_comparison_function(tag_flag)
-        wordfunc = self._get_comparison_function(word_flag)
+        tagfunc = self._get_comparison_function(tag_flag, 'tag', **kwargs)
+        wordfunc = self._get_comparison_function(word_flag, 'word', **kwargs)
 
-        parent_tag = kwargs.get('parent_tag', None)
+        parent_tag = kwargs.get('parent_tag', '')
         parent_flag = kwargs.get('parent_flag', 0)
-        parentfunc = self._get_comparison_function(parent_flag)
+        parentfunc = self._get_comparison_function(parent_flag,
+            'parent', **kwargs
+        )
 
-        if word:
-            # If word exists, results can only come from end nodes
+        # If word exists, results can only come from end nodes.
+        # Similarly, if word_flag is CUSTOM, it can be assumed the user intends
+        # to filter based on word (although the exact function/purpose of the
+        # custom callable can of course not be known).
+        if word or word_flag == self.CUSTOM:
             return self._search_end_nodes(tag, tagfunc, word, wordfunc,
                 parent_tag, parentfunc
             )
@@ -275,13 +296,16 @@ class ParseTree:
                     )
                     stripped = stripped[len(match.group()) - 1:]
 
-    def _get_comparison_function(self, flag):
+    def _get_comparison_function(self, flag, attr_name, **kwargs):
         """
         Return the comparison functions for tag and word to be used in
         search(), in that order.
 
-        The comparisons all have the signature (phrase, s)
+        The comparisons all have the signature (phrase, attribute)
         """
+        if flag == self.CUSTOM:
+            return self._get_custom_comparison_function(attr_name, **kwargs)
+        
         exact = lambda phrase, s: phrase == s if phrase else True
         contains = lambda phrase, s: phrase in s
         startswith = lambda phrase, s: s.startswith(phrase)
@@ -291,7 +315,7 @@ class ParseTree:
             self.EXACT : exact,
             self.CONTAINS : contains,
             self.STARTSWITH : startswith,
-            self.REMATCH : rematch
+            self.REMATCH : rematch,
         }
 
         try:
@@ -305,9 +329,28 @@ class ParseTree:
 
         return comparison_func
 
+    def _get_custom_comparison_function(self, attr_name, **kwargs):
+        key = attr_name + '_func'
+
+        try:
+            customfunc = kwargs[key]
+        except KeyError:
+            raise CustomCallableError(
+                "Named argument '{0}' not found. ".format(key) +
+                "This attribute is required when using the CUSTOM flag."
+            )
+        
+        if not hasattr(customfunc, '__call__'):
+            raise CustomCallableError(
+                "Object passed for '{0}' is not callable. ".format(key) +
+                "The object must be a callable that accepts two strings: " +
+                "the search phrase and the node attribute string.\n" +
+                "Got: {0}".format(customfunc)
+            )
+
+        return customfunc
+
     def _search_all_nodes(self, tag, tagfunc, parent_tag, parentfunc):
-        """
-        """
         results = []
         
         for node in self.iternodes():
@@ -319,7 +362,6 @@ class ParseTree:
                     results.append(node)
 
         return results
-        
 
     def _search_end_nodes(self, tag, tagfunc, word, wordfunc,
                           parent_tag, parentfunc):

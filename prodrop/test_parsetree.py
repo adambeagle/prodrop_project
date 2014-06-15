@@ -6,8 +6,9 @@ import re
 import unittest
 
 from exceptions import SearchFlagError
-from parsetree import (endnode_pattern, ParseTree, 
-    ParseTreeEndNode, ParseTreeThruNode, thrunode_pattern)
+from parsetree import (endnode_pattern, ParseTree, ParseTreeEndNode,
+    ParseTreeThruNode, thrunode_pattern
+)
 
 class ThruNodePatternTestCase(unittest.TestCase):
     def _test_failure(self, line):
@@ -320,6 +321,45 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
 
         with self.assertRaises(SearchFlagError) as cm:
             matches = t.search(tag='S', tag_flag=15)
+
+    def test_search_custom(self):
+        t = self.tree
+
+        def customfunc(phrase, s):
+            try:
+                return phrase == s[1]
+            except IndexError:
+                return False
+
+        is_np = lambda phrase, s: s == 'NP'
+        matches = t.search(tag_flag=t.CUSTOM, tag_func=is_np)
+        self.assertEqual(len(matches), 2)
+        for match in matches:
+            self.assertEqual(match.tag, 'NP')
+
+        matches = t.search(word_flag=t.CUSTOM, word_func=is_np)
+        self.assertEqual(len(matches), 0)
+
+        matches = t.search(word= 'o', word_flag=t.CUSTOM, word_func=customfunc)
+        self.assertEqual(len(matches), 2)
+        self.assertEqual(matches[0].word, 'John')
+        self.assertEqual(matches[1].word, 'loves')
+
+        matches = t.search(tag='N', tag_flag=t.CUSTOM, tag_func=customfunc,
+            parent_tag='P', parent_flag=t.CUSTOM, parent_func=customfunc
+        )
+        self.assertEqual(len(matches), 2)
+        self.assertEqual(matches[0].tag, 'NNP')
+        self.assertEqual(matches[0].word, 'John')
+        self.assertEqual(matches[1].tag, 'NNP')
+        self.assertEqual(matches[1].word, 'Mary')
+
+        matches=t.search(tag_flag=t.CUSTOM, tag_func=is_np, parent_tag='P',
+            parent_flag=t.CUSTOM, parent_func=customfunc
+        )
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].tag, 'NP')
+        self.assertEqual(matches[0].parent.tag, 'VP')
 
     def test_search_parent(self):
         """Test searching with parent_tag and parent_flag"""
