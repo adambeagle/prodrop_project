@@ -206,7 +206,28 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
         for node in tree.search(tag='NNP'):
             test_no_siblings(node)
 
-        # TODO finish
+        sibs = tuple(tree.get_siblings(tree.search(tag='NP',
+                                                   parent_tag='S')[0])
+        )
+        self.assertEqual(len(sibs), 2)
+        self.assertEqual(sibs[0].tag, 'VP')
+        self.assertEqual(sibs[1].tag, 'PUNC')
+
+        sibs = tuple(tree.get_siblings(tree.search(tag='VP')[0]))
+        self.assertEqual(len(sibs), 2)
+        self.assertEqual(sibs[0].tag, 'NP')
+        self.assertEqual(sibs[1].tag, 'PUNC')
+
+        sibs = tuple(tree.get_siblings(tree.search(tag='PUNC')[0]))
+        self.assertEqual(len(sibs), 2)
+        self.assertEqual(sibs[0].tag, 'NP')
+        self.assertEqual(sibs[1].tag, 'VP')
+
+        sibs = tuple(tree.get_siblings(tree.search(tag='VPZ')[0]))
+        self.assertEqual(len(sibs), 1)
+        self.assertEqual(sibs[0].tag, 'NP')
+        self.assertEqual(sibs[0].children[0].word, 'Mary')
+        
         
         
     def test_iterendnodes(self):
