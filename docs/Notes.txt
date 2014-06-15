@@ -30,3 +30,5 @@ CONJ is a link to previous sentence?
 
 QUESTIONS
 =========
+Word order of reconstructed Arabic sentence from tree.
+Is CV a primary verb?

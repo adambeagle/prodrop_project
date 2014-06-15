@@ -8,10 +8,10 @@ PURPOSE:
 """
 from constants import TREEBANK_DATA_PATH
 from parsetree import ParseTree
-from util import itertrees_dir, Timer
+from util import itertrees, Timer
 
-# TODO add more constraints?
-# Could check if particular sibling nodes exist.
+INPUT_PATH = '../treebank_data/testdata/simple_trees.txt'
+
 def get_prodrops(tree):
     """
     Return list of pro-drop nodes in a single ParseTree.
@@ -20,21 +20,44 @@ def get_prodrops(tree):
     of NP-SBJ.
     """
     prodrops = []
-    for node in tree.search(tag='-NONE-', word='*'):
-        if node.parent.tag.startswith('NP-SBJ'):
-            prodrops.append(node)
+
+    # Find nodes 
+    for node in tree.search(tag='-NONE-', word='*', parent='NP-SBJ',
+        parent_flag=tree.STARTSWITH
+    ):
+        for sibling in tree.get_siblings(node.parent):
+            if sibling.tag.startswith('IV'):
+                prodrops.append(node)
 
     return prodrops
+
+def report_prodrops(tree):
+    """
+    """
+    count = 0
+    
+    for node in tree.search(tag='-NONE-', word='*', parent='NP-SBJ',
+        parent_flag=tree.STARTSWITH
+    ):
+        for sibling in tree.get_siblings(node.parent):
+            if sibling.tag.startswith('IV'):
+                count += 1
+                print('Pro-drop found!')
+                print('Verb tag: {0}'.format(sibling.tag))
+                print('Verb: {0}\n'.format(sibling.word))
+
+    return count
 
 ###############################################################################
 if __name__ == '__main__':
     with Timer() as timer:
         count = 0
         prodrop_count = 0
-        for tree in itertrees_dir(TREEBANK_DATA_PATH, cache_end_nodes=0):
-            prodrop_count += len(get_prodrops(tree))
+        for tree in itertrees(INPUT_PATH, cache_end_nodes=1):
+            prodrop_count += report_prodrops(tree)
             count +=1
 
-        print(count)
-        print(prodrop_count)
-        print('Time: {0}s'.format(timer.elapsed_time))
+        print('===================================')
+        print('Total trees scanned: {0}'.format(count))
+        print('Pro-drops found: {0}'.format(prodrop_count))
+        print('Time: {0:.3f}s'.format(timer.elapsed_time))
