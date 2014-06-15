@@ -292,7 +292,7 @@ class ParseTree:
                         )
                     
                     node = ParseTreeEndNode(node, 
-                        match.group('tag'), match.group('word')
+                        match.group('tag'), match.group('word').strip('-')
                     )
                     stripped = stripped[len(match.group()) - 1:]
 
