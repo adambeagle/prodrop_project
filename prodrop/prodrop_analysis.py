@@ -12,14 +12,19 @@ from util import itertrees, itertrees_dir, Timer
 
 INPUT_PATH = TREEBANK_DATA_PATH #'../treebank_data/testdata/simple_trees.txt'
 OUTPUT_PATH = 'report.txt'
+PRODROP_WORD_PATTERN = '^\*(?:-\d+)?$'
 
 def iterprodrops(tree):
     """
     Yield pro-drop nodes, i.e. (-NONE- *) nodes whose parent is a variant
     of NP-SBJ.
     """
-    return (node for node in tree.search(tag='-NONE-', word='*',
-        parent_tag='NP-SBJ', parent_flag=tree.STARTSWITH)
+    return (node for node in tree.search(
+        tag='-NONE-',
+        word=PRODROP_WORD_PATTERN,
+        word_flag=tree.REMATCH,
+        parent_tag='NP-SBJ',
+        parent_flag=tree.STARTSWITH)
     )
 
 def prodrop_verb_association(treesfunc):
