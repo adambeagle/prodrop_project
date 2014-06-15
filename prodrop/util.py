@@ -6,6 +6,7 @@ DESCRIPTION:
     Utility module. Contains functions and classes that are useful and reusable
     throughout the project.
 """
+from datetime import datetime
 from os import listdir
 from os.path import normpath, splitext
 import time
@@ -78,6 +79,10 @@ def itertrees_dir(path, **kwargs):
     for filepath in get_files_by_ext(path, '.parse', prepend_dir=True):
         for tree in itertrees(filepath, **kwargs):
             yield tree
+
+def timestamp_now():
+    now = datetime.now()
+    return now.strftime("%Y-%m-%d %H.%M.%S")
 
 ################################################################################
 class TimerError(Exception):

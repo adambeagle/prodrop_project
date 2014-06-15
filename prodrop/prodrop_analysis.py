@@ -8,10 +8,10 @@ PURPOSE:
 """
 from constants import TREEBANK_DATA_PATH
 from parsetree import ParseTree
-from util import itertrees, itertrees_dir, Timer
+from util import itertrees, itertrees_dir, Timer, timestamp_now
 
 INPUT_PATH = TREEBANK_DATA_PATH #'../treebank_data/testdata/simple_trees.txt'
-OUTPUT_PATH = 'report.txt'
+OUTPUT_PATH = '../reports/'
 PRODROP_WORD_PATTERN = '^\*(?:-\d+)?$'
 
 def iterprodrops(tree):
@@ -50,7 +50,8 @@ def prodrop_verb_association(treesfunc):
     
 def _write_report(verbs, tree_count, prodrop_count, prodrop_with_verb_count):
     """ """
-    outfile = open(OUTPUT_PATH, 'w', encoding='utf8')
+    path = '{0}report {1}.txt'.format(OUTPUT_PATH, timestamp_now())
+    outfile = open(path, 'w', encoding='utf8')
     
     def print_and_write(s):
         print(s)
@@ -73,7 +74,7 @@ def _write_report(verbs, tree_count, prodrop_count, prodrop_with_verb_count):
     
     outfile.close()
 
-    print('\nReport written to {0}'.format(OUTPUT_PATH))
+    print('\nReport written to {0}'.format(path))
 
 def _update_verbs(verbs, newverb):
     if newverb in verbs:

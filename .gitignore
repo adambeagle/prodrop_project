@@ -1,6 +1,7 @@
 prodrop/*.txt
 treebank_data/*/*
 !treebank_data/testdata/*
+reports/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
