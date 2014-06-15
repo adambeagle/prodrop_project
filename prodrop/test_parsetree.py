@@ -421,7 +421,7 @@ class ComplexArabicTreeTestCase(unittest.TestCase):
     automatically placed at the head of a file by some text editors.
     """
     def setUp(self):
-        path = '../treebank_data/sample_tree_large.parse'
+        path = '../treebank_data/testdata/sample_tree_large.parse'
         with open(path, encoding='utf8') as f:
             self.rawdata = f.read()
 
