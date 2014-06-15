@@ -204,7 +204,6 @@ class ParseTree:
         """
         return (node.word for node in self.iterendnodes() if not node.tag == '-NONE-')
 
-    # TODO make pretty again :(
     def search(self, tag=None, word=None, tag_flag=0, word_flag=0, **kwargs):
         """
         Return list of nodes matching parameters.
@@ -219,8 +218,6 @@ class ParseTree:
 
         All searches are case-sensitive for the time being.
         """
-        results = []
-        
         tagfunc = self._get_comparison_function(tag_flag)
         wordfunc = self._get_comparison_function(word_flag)
 
@@ -229,23 +226,12 @@ class ParseTree:
         parentfunc = self._get_comparison_function(parent_flag)
 
         if word:
-            for node in self.iterendnodes():
-                if tagfunc(tag, node.tag) and wordfunc(word, node.word):
-                    if parent_tag and node.parent is not None:
-                        if parentfunc(parent_tag, node.parent.tag):
-                            results.append(node)
-                    elif not parent_tag:
-                        results.append(node)
+            # If word exists, results can only come from end nodes
+            return self._search_end_nodes(tag, tagfunc, word, wordfunc,
+                parent_tag, parentfunc
+            )
         else:
-            for node in self.iternodes():
-                if tagfunc(tag, node.tag):
-                    if parent_tag and node.parent is not None:
-                        if parentfunc(parent_tag, node.parent.tag):
-                            results.append(node)
-                    elif not parent_tag:
-                        results.append(node)
-
-        return results
+            return self._search_all_nodes(tag, tagfunc, parent_tag, parentfunc)
 
     def _build_from_lines(self, lines):
         """
@@ -318,6 +304,38 @@ class ParseTree:
             )
 
         return comparison_func
+
+    def _search_all_nodes(self, tag, tagfunc, parent_tag, parentfunc):
+        """
+        """
+        results = []
+        
+        for node in self.iternodes():
+            if tagfunc(tag, node.tag):
+                if parent_tag and node.parent is not None:
+                    if parentfunc(parent_tag, node.parent.tag):
+                        results.append(node)
+                elif not parent_tag:
+                    results.append(node)
+
+        return results
+        
+
+    def _search_end_nodes(self, tag, tagfunc, word, wordfunc,
+                          parent_tag, parentfunc):
+        """
+        Search only end nodes. Should be called only when a search query
+        provides a 'word' attribute.
+        """
+        results = []
+        
+        for node in self.iterendnodes():
+            if (tagfunc(tag, node.tag) and wordfunc(word, node.word)
+                and parentfunc(parent_tag, node.parent.tag)
+            ):
+                results.append(node)
+
+        return results
 
     # TODO
     # Currently each word is separated by a space, excluding punctuation.
