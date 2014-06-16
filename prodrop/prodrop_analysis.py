@@ -39,8 +39,15 @@ def iterprodrops(tree):
         parent_flag=tree.STARTSWITH)
     )
 
+# TODO refactor
 def prodrop_verb_association(treesfunc):
     """
+    Analyze every tree in INPUT_PATH for pro-drop nodes and find an
+    associated verb for each.
+
+    Counts of distinct associated verbs are gathered and printed.
+
+    A report is written to OUTPUT_PATH with results from the analysis.
     """
     prodrop_count = 0
     prodrop_with_verb_count = 0
@@ -77,6 +84,8 @@ def prodrop_verb_association(treesfunc):
                         update_distinct_counts(verbs, sib.word)
                         break
 
+            # Store sibling tags for reporting if no associated verb
+            # found matching allowed tags. 
             if not assoc_verb_found:
                 for t in sibtags:
                     update_distinct_counts(ignored_tags, t)
@@ -89,64 +98,65 @@ def prodrop_verb_association(treesfunc):
         prodrop_with_verb_count, ignored_tags, failure_trees,
         tree_with_prodrop_count, allowed_verb_tags
     )
-    
+
+def _print_and_write(outfile, description, value, nl=False):
+    """
+    Designed with _write_report specifically in mind; Not for general use.
+    """
+    s = '{0}{1:>5} - {2}'.format('\n' if nl else '', value, description)
+    print(s)
+    outfile.write(s)
+    outfile.write('\n')
+
 def _write_report(verbs, tree_count, prodrop_count, prodrop_with_verb_count,
                   ignored_tags, failure_trees, tree_with_prodrop_count,
                   allowed_verb_tags):
-    """ """
+    """
+    Write report of results from prodrop_verb_association to
+    OUTPUT_PATH/report (timestamp).txt
+    """
     path = normpath(join(OUTPUT_PATH,
         'report {0}.txt'.format(timestamp_now())
     ))
     
-    def print_and_write(s):
-        print(s)
-        outfile.write(s)
-        outfile.write('\n')
-
     with open(path, 'w', encoding='utf8') as outfile:
         print('')
-        print_and_write('Trees searched: {0}'.format(tree_count))
-        print_and_write(
-            'Trees with at least 1 pro-drop: {0}'.format(tree_with_prodrop_count)
-        )
-        print_and_write(
-            'Trees with failed sibling lookup: {0}\n'.format(len(failure_trees))
-        )
-        print_and_write('Pro-drops found: {0}'.format(prodrop_count))
-        print_and_write('Pro-drops with associated verb found: {0}'.format(
-            prodrop_with_verb_count
-        ))
-        print_and_write('Distinct associated verbs found: {0}'.format(len(verbs)))
-        print_and_write(
-            'Distinct excluded sibling tags: {0}'.format(len(ignored_tags))
-        )
+        _print_and_write(outfile, 'Trees searched', tree_count)
+        _print_and_write(outfile, 'Trees with at least 1 pro-drop',
+                         tree_with_prodrop_count)
+        _print_and_write(outfile, 'Trees with failed sibling lookup',
+                         len(failure_trees))
+        _print_and_write(outfile, 'Total pro-drops found', prodrop_count, nl=1)
+        _print_and_write(outfile, 'Pro-drops with associated verb found',
+                         prodrop_with_verb_count)
+        _print_and_write(outfile, 'Distinct associated verbs found',
+                         len(verbs), nl=1)
+        _print_and_write(outfile, 'Distinct excluded sibling tags',
+                         len(ignored_tags))
 
-        outfile.write('\nALLOWED VERB TAG BASES\n=======================\n')
-        for tag in allowed_verb_tags:
-            outfile.write('  {0}\n'.format(tag))
+        _write_container(outfile, 'Allowed verb tag bases', allowed_verb_tags)
+        _write_container(outfile,
+            'Sibling tags of pro-drops with no associated verb found',
+            ignored_tags)
+        _write_container(outfile, 'Verb occurrences', verbs)
         
-        outfile.write('\nVERB OCCURENCES\n===============\n')
-        for v in sorted(verbs, key=lambda x: verbs[x], reverse=True):
-            outfile.write('{0:>5}'.format(verbs[v]))
-            outfile.write('  :  {0}\n'.format(v))
-
-        outfile.write('\nEXCLUDED PRO-DROP SIBLING TAGS\n')
-        outfile.write('====================================\n')
-        for tag in sorted(
-            ignored_tags, key=lambda x: ignored_tags[x], reverse=True
-        ):
-            outfile.write('{0:>5}'.format(ignored_tags[tag]))
-            outfile.write('  :  {0}\n'.format(tag))
-
-##        outfile.write('\nTREES WITH PRO-DROPS WITH NO ASSOC. VERB FOUND:\n')
-##        outfile.write('==================================================\n')
-##        for tree in failure_trees:
-##            outfile.write(tree.treebank_notation)
-##            outfile.write('\n')
-                
 
     print('\nReport written to', path)
 
+def _write_container(outfile, heading, c):
+    """
+    Pretty-print a sequence or a dict.
+    Designed with _write_report specifically in mind; Not for general use.
+    """
+    outfile.write('\n{0}\n{1}\n'.format(heading, '='*len(heading)))
+
+    if isinstance(c, dict):
+        for key in sorted(c, key=lambda x: c[x], reverse=True):
+            outfile.write('{0:>5}'.format(c[key]))
+            outfile.write('  :  {0}\n'.format(key))
+    else:
+        for x in c:
+            outfile.write('  {0}\n'.format(x))
 ###############################################################################
 if __name__ == '__main__':
     try:
