@@ -84,6 +84,17 @@ def timestamp_now():
     now = datetime.now()
     return now.strftime("%Y-%m-%d %H.%M.%S")
 
+def update_or_increment(d, key):
+    """
+    Set d[key] = 1 if key does not already exist in d, otherwise
+    increments value of d[key] by 1. Useful when storing counts of
+    distinct items.
+    """
+    if key in d:
+        d[key] += 1
+    else:
+        d[key] = 1
+
 ################################################################################
 class TimerError(Exception):
     pass

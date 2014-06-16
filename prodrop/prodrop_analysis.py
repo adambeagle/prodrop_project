@@ -10,7 +10,7 @@ from os.path import join, normpath
 
 from constants import TREEBANK_DATA_PATH
 from parsetree import ParseTree
-from util import itertrees, itertrees_dir, Timer, timestamp_now
+from util import itertrees, itertrees_dir, Timer, timestamp_now, update_or_increment
 
 INPUT_PATH = TREEBANK_DATA_PATH #'../treebank_data/testdata/simple_trees.txt'
 OUTPUT_PATH = '../reports/'
@@ -45,7 +45,7 @@ def prodrop_verb_association(treesfunc):
             for sibling in tree.get_siblings(pdnode.parent):
                 if sibling.tag.startswith('IV'):
                     prodrop_with_verb_count += 1
-                    _update_verbs(verbs, sibling.word)
+                    update_or_increment(verbs, sibling.word)
 
     print('Complete.')
     _write_report(verbs, tree_count, prodrop_count, prodrop_with_verb_count)
@@ -75,16 +75,8 @@ def _write_report(verbs, tree_count, prodrop_count, prodrop_with_verb_count):
         outfile.write('{0:>2}'.format(verbs[v]))
         outfile.write('  :  {0:<2}\n'.format(v))
 
-    
     outfile.close()
-
     print('\nReport written to {0}'.format(path))
-
-def _update_verbs(verbs, newverb):
-    if newverb in verbs:
-        verbs[newverb] += 1
-    else:
-        verbs[newverb] = 1
 
 ###############################################################################
 if __name__ == '__main__':
