@@ -4,8 +4,6 @@ Extract and create two data sets: pro-drops and subjects
   Each subject or pro-drop has a verb associated with it
 For each verb, report # associations with pro-drop and explicit subject
 
-*T* in e.g. (NP-SBJ (-NONE- *T*-1)) means the subject is explicit in the sentence but preceded the verb.
-
 CURRENT GOAL
 ============
 Find all (-NONE- *) nodes that are children of NP-SBJ or a variant.
@@ -30,5 +28,32 @@ CONJ is a link to previous sentence?
 
 QUESTIONS
 =========
-Word order of reconstructed Arabic sentence from tree.
-Is CV a primary verb?
+
+Potential verbs to consider associated with a pro-drop:
+
+TAG		OCCURENCES	MEANING
+==============================================================
+PV		4810		Perfect verb		
+IV		4726		Imperfect verb
+ADJ.VN		641		Verbal adjective
+NOUN.VN		407		Verbal noun
+CV   		99		Command verb
+DET+ADJ.VN	70		Determiner + verbal adjective
+PSEUDO-VERB	19
+DIALECT		13
+VERB		10
+DET+NOUN.VN     10		Determiner + verbal noun	
+
+Counting all these gets associated verb from 10,805 of 11,383 total pro-drops (95%).
+
+
+
+What are these?
+
+(S (VP (PV_PASS حدد)
+       (NP-SBJ (-NONE- *T*-3))
+       (NP-OBJ (-NONE- *-3))
+
+(S (VP (PV_PASS+PVSUFF_SUBJ:3MS {ُعْتُبِرَ)
+       (NP-SBJ (-NONE- *T*-1))
+       (S (NP-SBJ (-NONE- *-1))
