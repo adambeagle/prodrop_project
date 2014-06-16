@@ -6,6 +6,8 @@ PURPOSE:
     Handles the primary objective of the project, i.e. gathering and analyzing
     pro-drop sentences.
 """
+from os.path import join, normpath
+
 from constants import TREEBANK_DATA_PATH
 from parsetree import ParseTree
 from util import itertrees, itertrees_dir, Timer, timestamp_now
@@ -50,7 +52,9 @@ def prodrop_verb_association(treesfunc):
     
 def _write_report(verbs, tree_count, prodrop_count, prodrop_with_verb_count):
     """ """
-    path = '{0}report {1}.txt'.format(OUTPUT_PATH, timestamp_now())
+    path = normpath(join(OUTPUT_PATH,
+        'report {0}.txt'.format(timestamp_now())
+    ))
     outfile = open(path, 'w', encoding='utf8')
     
     def print_and_write(s):
