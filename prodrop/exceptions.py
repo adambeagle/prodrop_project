@@ -26,6 +26,9 @@ class TreeConstructionError(ParseTreeError):
 
 ###############################################################################
 # Other
+class InputPathError(Exception):
+    pass
+
 class MissingParseFilesError(Exception):
     pass
 
