@@ -122,18 +122,8 @@ class ParseTree:
     search is performed for a tag, word, or parent.
     See search() for more information.
 
-    EXACT      - Search phrase matches an attribute exactly.
-    
     CONTAINS   - Search phrase, exactly as written, appears anywhere in the
                  attribute at least once.
-    
-    STARTSWITH - Search phrase, exactly as written, appears at the start of
-                 the attribute.
-    
-    REMATCH    - Search phrase is assumed to be a regular expression
-                 pattern which is passed to re.match(). If re.match returns
-                 any Match object, the attribute is considered a match for
-                 the purpose of the search.
 
     CUSTOM     - A user-passed callable that will be used for the comparison.
                  Must be passed as a named argument called (name)_func, where
@@ -146,6 +136,18 @@ class ParseTree:
                  return a boolean representing a valid or invalid match. If
                  (name)_func is not passed or is not callable,
                  CustomCallableError will be raised.
+
+    EXACT      - Search phrase matches an attribute exactly.
+
+    IS_NOT     - Attribute is not exactly equal to search phrase.
+    
+    REMATCH    - Search phrase is assumed to be a regular expression
+                 pattern which is passed to re.match(). If re.match returns
+                 any Match object, the attribute is considered a match for
+                 the purpose of the search.
+    
+    STARTSWITH - Search phrase, exactly as written, appears at the start of
+                 the attribute.
     """
     # WARNING: EXACT must remain 0 to remain default.
     EXACT = 0
@@ -153,6 +155,7 @@ class ParseTree:
     STARTSWITH = 2
     REMATCH = 3
     CUSTOM = 4
+    IS_NOT = 5
     
     def __init__(self, lines, cache_end_nodes=True):
         """
@@ -310,12 +313,14 @@ class ParseTree:
         contains = lambda phrase, s: phrase in s
         startswith = lambda phrase, s: s.startswith(phrase)
         rematch = lambda pattern, s: re.match(pattern, s)
+        notfunc = lambda phrase, s: not phrase == s
 
         funcmap = {
             self.EXACT : exact,
             self.CONTAINS : contains,
             self.STARTSWITH : startswith,
             self.REMATCH : rematch,
+            self.IS_NOT : notfunc,
         }
 
         try:
