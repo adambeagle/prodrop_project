@@ -20,14 +20,49 @@ OUTPUT_PATH = '../reports/' # Must be directory; Filename auto-generated
 PRODROP_WORD_PATTERN = '^\*(?:-\d+)?$'
 
 ###############################################################################
-class ProdropAnalyzer():
-    """ """
-    def __init__(self, input_path):
+def iterprodrops(tree):
+    """
+    Yield pro-drop nodes, i.e. (-NONE- *) nodes whose parent is a variant
+    of NP-SBJ.
+    """
+    return (node for node in tree.search(
+        tag='-NONE-',
+        word=PRODROP_WORD_PATTERN,
+        word_flag=tree.REMATCH,
+        parent_tag='NP-SBJ',
+        parent_flag=tree.STARTSWITH)
+    )
+
+###############################################################################
+class SubjectVerbAnalyzer():
+    """
+    ATTRIBUTES:
+    ===========
+    * allowed_verb_tags
+    * input_path
+    * subject_descriptor
+
+    Populated by do_verb_analysis:
+    ------------------------------
+      * failure_trees
+      * ignored_tag_counts
+      * subject_count
+      * subject_w_verb_count
+      * tree_count
+      * tree_w_subject_count
+      * verb_counts
+
+    METHODS:
+    ========
+      * do_verb_analysis
+      * itersubjects
+      * print_report_basic
+      * print_report_full
+      * write_report_basic
+      * write_report_full
+    """
+    def __init__(self, input_path, subject_descriptor):
         """input_path may be to directory or existing .parse file."""
-        self._reset()
-        self.allowed_verb_tags = ('IV', 'CV', 'PV', 'VERB', 'PSEUDO_VERB',
-            'ADJ.VN', 'NOUN.VN', 'DET+ADJ.VN',
-        )
 
         if isfile(input_path):
             self.itertrees = itertrees
@@ -39,42 +74,57 @@ class ProdropAnalyzer():
                 "existing file.\ninput_path: {0}".format(input_path)
             )
 
+        self.subject_descriptor = subject_descriptor
         self.input_path = input_path
+        self.allowed_verb_tags = (
+            'IV', 'CV', 'PV', 'VERB', 'PSEUDO_VERB',
+            'ADJ.VN', 'NOUN.VN', 'DET+ADJ.VN',
+        )
 
-    def prodrop_verb_association_analysis(self):
-        """
-        Analyze every tree in INPUT_PATH for pro-drop nodes and find an
-        associated verb for each.
+        # Instantiate all counters/dictionaries populated by do_verb_analysis
+        self._reset()
 
-        Sets the following class-level attributes for use in reporting or
-        further analysis:
-            tree_count, tree_w_prodrop_count, prodrop_count, verb_counts,
-            ignored_tag_counts, failure_trees
-        """
+    def do_verb_analysis(self):
         self._reset()
         
-        print('Starting pro-drop search... ', end='')
+        print('Starting {0} search... '.format(
+            self.subject_descriptor), end=''
+        )
         for tree in self.itertrees(self.input_path):
             self.tree_count += 1
-            has_prodrop = False
+            has_subject = False
             
-            for pdnode in iterprodrops(tree):
-                has_prodrop = True
-                self.prodrop_count += 1
+            for node in self.itersubjects(tree):
+                has_subject = True
+                self.subject_count += 1
                 sibtags = []
 
-                result = self._check_siblings_for_verb(pdnode)
-                if not result == True:
-                    # Store sibling tags for reporting if no associated verb
-                    # found matching allowed tags.
+                result = self._check_siblings_for_verb(
+                    node, self.allowed_verb_tags
+                )
+
+                # Success. Verb found
+                if hasattr(result, 'tag'):
+                    self.subject_w_verb_count += 1
+                    update_distinct_counts(self.verb_counts, result.word)
+
+                # Failure.
+                # Store sibling tags for reporting if no associated verb
+                # found matching allowed tags.
+                else:
                     sibtags += result
                     for t in sibtags:
                         update_distinct_counts(self.ignored_tag_counts, t)
                     self.failure_trees.add(tree)
 
-            self.tree_w_prodrop_count += 1 if has_prodrop else 0
+            self.tree_w_subject_count += 1 if has_subject else 0
                 
         print('Complete.\n')
+
+    def itersubjects(self):
+        raise NotImplementedError(
+            "Inheriting classes must override and implement this method."
+        )
 
     def print_report_basic(self):
         self.write_report_basic(stdout)
@@ -84,26 +134,30 @@ class ProdropAnalyzer():
 
     def write_report_basic(self, out, rw=None):
         """ """
+        sd = self.subject_descriptor
+        
         if not rw:
             rw = ReportWriter(out)
 
         rw.write_int_stat('Trees searched', self.tree_count)
-        rw.write_int_stat('Trees with at least 1 pro-drop',
-                          self.tree_w_prodrop_count)
+        rw.write_int_stat('Trees with at least 1 {0}'.format(sd),
+                          self.tree_w_subject_count)
         rw.write_int_stat('Trees with failed sibling lookup',
                           len(self.failure_trees))
         
-        rw.write_int_stat('Total pro-drops found', self.prodrop_count,
+        rw.write_int_stat('Total {0}s found'.format(sd), self.subject_count,
                           skipline=True)
-        rw.write_int_stat('Pro-drops with associated verb found',
-                          self.prodrop_w_verb_count)
+        rw.write_int_stat(
+            '{0}s with associated verb found'.format(sd.capitalize()),
+            self.subject_w_verb_count
+        )
 
-        if self.prodrop_count > 0:
-            perc = 100*self.prodrop_w_verb_count / self.prodrop_count
+        if self.subject_count > 0:
+            perc = 100*self.subject_w_verb_count / self.subject_count
         else:
             perc = 0
             
-        rw.write_float_stat('Percent pro-drops with associated verb',
+        rw.write_float_stat('Percent {0}s with associated verb'.format(sd),
                             perc, decprec=1, ntrail='%')
         rw.write_int_stat('Distinct associated verbs found',
                           len(self.verb_counts), skipline=True)
@@ -113,13 +167,17 @@ class ProdropAnalyzer():
     def write_report_full(self, out):
         """ """
         rw = ReportWriter(out)
-        rw.write_heading_toplevel('PRO-DROP VERB ASSOCIATION ANALYSIS REPORT')
+        sd = self.subject_descriptor
+        
+        rw.write_heading_toplevel(
+            '{0} VERB ASSOCIATION ANALYSIS REPORT'.format(sd.upper())
+        )
         
         self.write_report_basic(out, rw)
         
         rw.write_sequence('Allowed verb tag bases', self.allowed_verb_tags)
         rw.write_dict(
-            'Sibling tags of pro-drops with no associated verb found',
+            'Sibling tags of {0}s with no associated verb found'.format(sd),
             self.ignored_tag_counts,
             sortonval=True,
             reverse=True
@@ -129,42 +187,86 @@ class ProdropAnalyzer():
             sortonval=True, reverse=True
         )
 
-    def _check_siblings_for_verb(self, pdnode):
+    def _check_siblings_for_verb(self, node, allowed_verb_tags):
         """
-        Check pro-drop node's NP-SBJ parent's siblings for a verb
-        node whose tag starts with a value in self.allowed_verb_tags.
+        Check node's siblings for a verb node whose tag starts with a
+        value in allowed_verb_tags.
 
-        If valid verb found, update self.verb_counts and
-        self.prodrop_w_verb_count accordingly.
-
-        If valid verb found, return True, otherwise list of tags
-        of all visited siblings.
+        If valid verb found, return the sibling node which contains the verb.
+        If no match found, return a list of tags of visited siblings.
         """
-        sibtags = []
+        sibling_tags = []
         
         # Only check siblings above parent, as subject always follows
         # verb as per the guidelines.
-        for sib in get_previous_siblings(pdnode.parent):
-            sibtags.append(sib.tag)
+        for sib in self._get_previous_siblings(node):
+            sibling_tags.append(sib.tag)
 
-            for tag in self.allowed_verb_tags:
+            for tag in allowed_verb_tags:
                 if sib.tag.startswith(tag):
-                    self.prodrop_w_verb_count += 1
-                    update_distinct_counts(self.verb_counts, sib.word)
-                    
-                    return True
+                    return sib
 
-        return sibtags
-        
+        return sibling_tags
+
+    def _get_previous_siblings(self, node):
+        """
+        Yield the prior siblings of a tree as found in a depth-first traversal.
+        """
+        for child in node.parent.children:
+            if child == node:
+                return
+
+            yield child
+
     def _reset(self):
-        """ """
+        """
+        Reset all class attributes to initial state.
+        Called automatically before each analysis, and by constructor.
+        """
         self.tree_count = 0
-        self.tree_w_prodrop_count = 0
-        self.prodrop_count = 0
-        self.prodrop_w_verb_count = 0
+        self.tree_w_subject_count = 0
+        self.subject_count = 0
+        self.subject_w_verb_count = 0
         self.verb_counts = {}
         self.ignored_tag_counts = {}
         self.failure_trees = set()
+
+###############################################################################
+class ProdropAnalyzer(SubjectVerbAnalyzer):
+    """ """
+    def __init__(self, input_path):
+        """input_path may be to directory or existing .parse file."""
+        super().__init__(input_path, 'pro-drop')
+
+    def itersubjects(self, tree):
+        """
+        Yield NP-SBJ parent nodes of pro-drop nodes.
+        """
+        return (node.parent for node in iterprodrops(tree))
+
+###############################################################################
+class NonProdropAnalyzer(SubjectVerbAnalyzer):
+    """ """
+    def __init__(self, input_path):
+        super().__init__(input_path, 'non-pro-drop')
+
+    # TODO Currently excluding ANY node whose child has a -NONE- tag,
+    # including traces, etc. Need to verify that this assumption is correct.
+    #
+    # TODO Assuming a -NONE- tag always a direct child of NP-SBJ and not
+    # further nested.
+    def itersubjects(self, tree):
+        """
+        Yield NP-SBJ nodes that do not represent pro-drops, i.e. a node
+        whose tag is a variant of NP-SBJ, that does not have a child with a
+        -NONE- tag.
+        """
+        return (node.parent for node in tree.search(
+            parent_tag='NP-SBJ',
+            parent_flag=tree.STARTSWITH,
+            tag='-NONE-',
+            tag_flag=tree.IS_NOT,
+        ))
 
 ###############################################################################
 class ReportWriter():
@@ -292,38 +394,14 @@ class ReportWriter():
             self.stream.write('  {0}\n'.format(x))
 
 ###############################################################################
-def get_previous_siblings(node):
-    """
-    Yield the prior siblings of a tree as found in a depth-first traversal.
-    """
-    for child in node.parent.children:
-        if child == node:
-            return
-
-        yield child
-
-def iterprodrops(tree):
-    """
-    Yield pro-drop nodes, i.e. (-NONE- *) nodes whose parent is a variant
-    of NP-SBJ.
-    """
-    return (node for node in tree.search(
-        tag='-NONE-',
-        word=PRODROP_WORD_PATTERN,
-        word_flag=tree.REMATCH,
-        parent_tag='NP-SBJ',
-        parent_flag=tree.STARTSWITH)
-    )
-
-###############################################################################
 if __name__ == '__main__':
     timer = Timer()
     outpath = normpath(join(
         OUTPUT_PATH, 'report {0}.txt'.format(timestamp_now())
     ))
     with timer:
-        pa = ProdropAnalyzer(INPUT_PATH)
-        pa.prodrop_verb_association_analysis()
+        pa = NonProdropAnalyzer(INPUT_PATH)
+        pa.do_verb_analysis()
         pa.print_report_basic()
 
         with open(outpath, 'w', encoding='utf8') as outfile:
