@@ -48,12 +48,14 @@ Counting all these gets associated verb from 10,805 of 11,383 total pro-drops (9
 
 
 
-What are these?
-
-(S (VP (PV_PASS حدد)
-       (NP-SBJ (-NONE- *T*-3))
-       (NP-OBJ (-NONE- *-3))
+What should be done in this situation?
+Does the trace point to the NP-SBJ in the nested S tag?
 
 (S (VP (PV_PASS+PVSUFF_SUBJ:3MS {ُعْتُبِرَ)
        (NP-SBJ (-NONE- *T*-1))
        (S (NP-SBJ (-NONE- *-1))
+
+
+REMINDERS
+=========
+DC July 3 - 8
