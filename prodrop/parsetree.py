@@ -223,6 +223,10 @@ class ParseTree:
         """
         return (node.word for node in self.iterendnodes() if not node.tag == '-NONE-')
 
+    # TODO Distinguish between None and empty string on tag/word/etc.?
+    # It seems unintuitive from the user perspective that the default word is
+    # empty, the default word flag is EXACT, yet matches are not filtered
+    # on word at all in that case.
     def search(self, tag='', word='', tag_flag=0, word_flag=0, **kwargs):
         """
         Return list of nodes matching parameters.
@@ -247,10 +251,10 @@ class ParseTree:
         )
 
         # If word exists, results can only come from end nodes.
-        # Similarly, if word_flag is CUSTOM, it can be assumed the user intends
-        # to filter based on word (although the exact function/purpose of the
-        # custom callable can of course not be known).
-        if word or word_flag == self.CUSTOM:
+        # Similarly, if word_flag is CUSTOM or IS_NOT, it can be assumed the
+        # user intends to filter based on word (although the exact
+        # function/purpose of a custom callable can of course not be known).
+        if word or word_flag in (self.CUSTOM, self.IS_NOT):
             return self._search_end_nodes(tag, tagfunc, word, wordfunc,
                 parent_tag, parentfunc
             )

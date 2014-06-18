@@ -309,6 +309,17 @@ class SimpleEnglishTreeTestCase(unittest.TestCase):
         self.assertEqual(matches[0].tag, 'PUNC')
         self.assertEqual(matches[0].word, '.')
 
+        matches = t.search(tag='NNP', word='John', word_flag=t.IS_NOT)
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0].tag, 'NNP')
+        self.assertEqual(matches[0].word, 'Mary')
+
+        matches = t.search(word='', word_flag=t.IS_NOT)
+        self.assertEqual(len(matches), 4)
+        for node in matches:
+            self.assertTrue(hasattr(node, 'word'))
+        
+
         # FAILURES
         matches = t.search(tag='NP', word='John')
         self.assertFalse(matches)
