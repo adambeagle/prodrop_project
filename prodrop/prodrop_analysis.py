@@ -77,8 +77,7 @@ class SubjectVerbAnalyzer():
         self.subject_descriptor = subject_descriptor
         self.input_path = input_path
         self.allowed_verb_tags = (
-            'IV', 'CV', 'PV', 'VERB', 'PSEUDO_VERB',
-            'ADJ.VN', 'NOUN.VN', 'DET+ADJ.VN',
+            'IV', 'PV', 'VERB', 'PSEUDO_VERB',
         )
 
         # Instantiate all counters/dictionaries populated by do_verb_analysis
@@ -264,8 +263,8 @@ class NonProdropAnalyzer(SubjectVerbAnalyzer):
         return (node.parent for node in tree.search(
             parent_tag='NP-SBJ',
             parent_flag=tree.STARTSWITH,
-            tag='-NONE-',
-            tag_flag=tree.IS_NOT,
+            word=PRODROP_WORD_PATTERN,
+            word_flag=tree.NOT_REMATCH,
         ))
 
 ###############################################################################
