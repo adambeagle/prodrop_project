@@ -119,35 +119,42 @@ class ParseTree:
     SEARCH FLAGS
     =========================================================================
     The following flags may be passed to ParseTree.search() to modify how a
-    search is performed for a tag, word, or parent.
+    search is performed for a tag, word, or parent. The description for each
+    flag describes the success condition(s).
     See search() for more information.
 
-    CONTAINS   - Search phrase, exactly as written, appears anywhere in the
-                 attribute at least once.
+    CONTAINS    - Search phrase, exactly as written, appears anywhere in the
+                  attribute at least once.
 
-    CUSTOM     - A user-passed callable that will be used for the comparison.
-                 Must be passed as a named argument called (name)_func, where
-                 (name) is replaced by the name of the attribute the CUSTOM
-                 flag was set for. For example, if tag_flag is set to CUSTOM,
-                 then "tag_func" must be a named argument to the search method.
-                 A custom comparison function is assumed to accept two strings,
-                 the first the search phrase and the second the attribute
-                 (i.e. the current node's tag, word, or parent's tag), and to
-                 return a boolean representing a valid or invalid match. If
-                 (name)_func is not passed or is not callable,
-                 CustomCallableError will be raised.
+    CUSTOM      - A user-passed callable that will be used for the comparison.
+                  Must be passed as a named argument called (name)_func, where
+                  (name) is replaced by the name of the attribute the CUSTOM
+                  flag was set for. For example, if tag_flag is set to CUSTOM,
+                  then "tag_func" must be a named argument to the search method.
+                  A custom comparison function is assumed to accept two strings,
+                  the first the search phrase and the second the attribute
+                  (i.e. the current node's tag, word, or parent's tag), and to
+                  return a boolean representing a valid or invalid match. If
+                  (name)_func is not passed or is not callable,
+                  CustomCallableError will be raised.
 
-    EXACT      - Search phrase matches an attribute exactly.
+    EXACT       - Search phrase matches an attribute exactly.
+                  This is the default search performed if no flag is specified.
 
-    IS_NOT     - Attribute is not exactly equal to search phrase.
+    IS_NOT      - Attribute is not exactly equal to search phrase.
     
-    REMATCH    - Search phrase is assumed to be a regular expression
-                 pattern which is passed to re.match(). If re.match returns
-                 any Match object, the attribute is considered a match for
-                 the purpose of the search.
-    
-    STARTSWITH - Search phrase, exactly as written, appears at the start of
-                 the attribute.
+    REMATCH     - Search phrase is assumed to be a regular expression
+                  pattern which is passed to re.match(). If re.match returns
+                  any Match object, the attribute is considered a match for
+                  the purpose of the search.
+
+    NOT_REMATCH - Search phrase is assumed to be a regular expression
+                  pattern which is passed to re.match(). If re.match returns
+                  None, the attribute is considered a match for
+                  the purpose of the search.
+
+    STARTSWITH  - Search phrase, exactly as written, appears at the start of
+                  the attribute.
     """
     # WARNING: EXACT must remain 0 to remain default.
     EXACT = 0
@@ -156,6 +163,7 @@ class ParseTree:
     REMATCH = 3
     CUSTOM = 4
     IS_NOT = 5
+    NOT_REMATCH = 6
     
     def __init__(self, lines, cache_end_nodes=True):
         """
@@ -317,6 +325,7 @@ class ParseTree:
         contains = lambda phrase, s: phrase in s
         startswith = lambda phrase, s: s.startswith(phrase)
         rematch = lambda pattern, s: re.match(pattern, s)
+        not_rematch = lambda pattern, s : re.match(pattern, s) is None
         notfunc = lambda phrase, s: not phrase == s
 
         funcmap = {
@@ -324,6 +333,7 @@ class ParseTree:
             self.CONTAINS : contains,
             self.STARTSWITH : startswith,
             self.REMATCH : rematch,
+            self.NOT_REMATCH : not_rematch,
             self.IS_NOT : notfunc,
         }
 
