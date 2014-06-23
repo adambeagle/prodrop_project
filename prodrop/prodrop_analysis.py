@@ -33,6 +33,35 @@ def iterprodrops(tree):
         parent_flag=tree.STARTSWITH)
     )
 
+def write_combined_csv(outfile, prodrop_analysis, nonprodrop_analysis):
+    column_widths = (20, 20, 15)
+    pdcounts = prodrop_analysis.verb_counts
+    npa = nonprodrop_analysis
+    npdcounts = {}
+
+    for verb, count in npa.verb_counts.items():
+        npdcounts[verb] = [count, False]
+        
+    outfile.write('VERB,PRO-DROP-COUNT,NON-PRO-DROP-COUNT\n')
+    for verb in prodrop_analysis.verb_counts:
+        outfile.write('{0},{1},'.format(
+            verb,
+            pa.verb_counts[verb],
+        ))
+
+        npdcount = 0
+        if verb in npdcounts:
+            npdcounts[verb][1] = True
+            npdcount = npdcounts[verb][0]
+            
+        outfile.write('{0}\n'.format(npdcount))
+
+    for verb, count in ((k, v[0]) for k, v in npdcounts.items() if not v[1]):
+        outfile.write('{0},{1},{2}\n'.format(
+            verb, 0, count
+        ))
+
+
 ###############################################################################
 class SubjectVerbAnalyzer():
     """
@@ -334,7 +363,7 @@ class ReportWriter():
             n, width - len(ntrail), decprec, ntrail, description)
         )
 
-    def write_heading(self, heading, skipline=True):
+    def write_heading(self, heading, ulchar='=', skipline=True):
         """
         Write to self.stream with format:
 
@@ -342,11 +371,12 @@ class ReportWriter():
         =======
 
         If skipline is set, a newline is written before the heading.
+        The character used to underline can be changed with named attribute 'ulchar.'
         """
         if skipline:
             self.stream.write('\n')
             
-        self.stream.write('{0}\n{1}\n'.format(heading, '='*len(heading)))
+        self.stream.write('{0}\n{1}\n'.format(heading, ulchar*len(heading)))
 
     def write_heading_toplevel(self, heading, skipline=False):
         """
@@ -396,15 +426,17 @@ class ReportWriter():
 if __name__ == '__main__':
     timer = Timer()
     outpath = normpath(join(
-        OUTPUT_PATH, 'report {0}.txt'.format(timestamp_now())
+        OUTPUT_PATH, 'verbs {0}.csv'.format(timestamp_now())
     ))
     with timer:
-        pa = NonProdropAnalyzer(INPUT_PATH)
+        pa = ProdropAnalyzer(INPUT_PATH)
+        npa = NonProdropAnalyzer(INPUT_PATH)
+        
         pa.do_verb_analysis()
-        pa.print_report_basic()
+        npa.do_verb_analysis()
 
         with open(outpath, 'w', encoding='utf8') as outfile:
-            pa.write_report_full(outfile)
+            write_combined_csv(outfile, pa, npa)
                       
     print('\nTime: {0:.3f}s'.format(timer.total_time))
 
