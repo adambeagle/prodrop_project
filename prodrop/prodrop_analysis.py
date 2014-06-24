@@ -6,6 +6,7 @@ PURPOSE:
     Handles the primary objective of the project, i.e. gathering and analyzing
     pro-drop sentences.
 """
+import csv
 from os.path import isfile, isdir, join, normpath
 
 from constants import TREEBANK_DATA_PATH
@@ -33,37 +34,8 @@ def iterprodrops(tree):
         parent_flag=tree.STARTSWITH)
     )
 
-def write_combined_csv(outfile, prodrop_analysis, nonprodrop_analysis):
-    column_widths = (20, 20, 15)
-    pdcounts = prodrop_analysis.verb_counts
-    npa = nonprodrop_analysis
-    npdcounts = {}
-
-    for verb, count in npa.verb_counts.items():
-        npdcounts[verb] = [count, False]
-        
-    outfile.write('VERB,PRO-DROP-COUNT,NON-PRO-DROP-COUNT\n')
-    for verb in prodrop_analysis.verb_counts:
-        outfile.write('{0},{1},'.format(
-            verb,
-            pa.verb_counts[verb],
-        ))
-
-        npdcount = 0
-        if verb in npdcounts:
-            npdcounts[verb][1] = True
-            npdcount = npdcounts[verb][0]
-            
-        outfile.write('{0}\n'.format(npdcount))
-
-    for verb, count in ((k, v[0]) for k, v in npdcounts.items() if not v[1]):
-        outfile.write('{0},{1},{2}\n'.format(
-            verb, 0, count
-        ))
-
-
 ###############################################################################
-class SubjectVerbAnalyzer():
+class SubjectVerbAnalyzer:
     """
     ATTRIBUTES:
     ===========
@@ -112,6 +84,39 @@ class SubjectVerbAnalyzer():
         # Instantiate all counters/dictionaries populated by do_verb_analysis
         self._reset()
 
+    def analyze_tree(self, tree):
+        self.tree_count += 1
+        has_subject = False
+        valid_verbs = []
+        
+        for node in self.itersubjects(tree):
+            has_subject = True
+            self.subject_count += 1
+            sibtags = []
+
+            result = self._check_siblings_for_verb(
+                node, self.allowed_verb_tags
+            )
+
+            # Success. Verb found
+            if hasattr(result, 'tag'):
+                self.subject_w_verb_count += 1
+                update_distinct_counts(self.verb_counts, result.word)
+                valid_verbs.append(result.word)
+
+            # Failure.
+            # Store sibling tags for reporting if no associated verb
+            # found matching allowed tags.
+            else:
+                sibtags += result
+                for t in sibtags:
+                    update_distinct_counts(self.ignored_tag_counts, t)
+                self.failure_trees.add(tree)
+
+        self.tree_w_subject_count += 1 if has_subject else 0
+
+        return valid_verbs
+
     def do_verb_analysis(self):
         self._reset()
         
@@ -119,33 +124,7 @@ class SubjectVerbAnalyzer():
             self.subject_descriptor), end=''
         )
         for tree in self.itertrees(self.input_path):
-            self.tree_count += 1
-            has_subject = False
-            
-            for node in self.itersubjects(tree):
-                has_subject = True
-                self.subject_count += 1
-                sibtags = []
-
-                result = self._check_siblings_for_verb(
-                    node, self.allowed_verb_tags
-                )
-
-                # Success. Verb found
-                if hasattr(result, 'tag'):
-                    self.subject_w_verb_count += 1
-                    update_distinct_counts(self.verb_counts, result.word)
-
-                # Failure.
-                # Store sibling tags for reporting if no associated verb
-                # found matching allowed tags.
-                else:
-                    sibtags += result
-                    for t in sibtags:
-                        update_distinct_counts(self.ignored_tag_counts, t)
-                    self.failure_trees.add(tree)
-
-            self.tree_w_subject_count += 1 if has_subject else 0
+            self.analyze_tree(tree)
                 
         print('Complete.\n')
 
@@ -297,6 +276,90 @@ class NonProdropAnalyzer(SubjectVerbAnalyzer):
         ))
 
 ###############################################################################
+class CombinedAnalyzer:
+    """
+    Used to run a combined pro-drop and non-pro-drop analysis.
+
+    ATTRIBUTES:
+      * input_path
+      * verb_counts
+
+    METHODS:
+      * do_verb_analysis
+      * write_csv
+    """
+    class VerbData:
+        """Utility object used for the values in verb_counts."""
+        def __init__(self):
+            self.prodrop_count = 0
+            self.nonprodrop_count = 0
+            
+    def __init__(self, input_path):
+        """input_path can be file or directory."""
+        self.verb_counts = {}
+
+        if isfile(input_path):
+            self.itertrees = itertrees
+        elif isdir(input_path):
+            self.itertrees = itertrees_dir
+        else:
+            raise ImportPathError(
+                "input_path is not a valid path to a directory or " +
+                "existing file.\ninput_path: {0}".format(input_path)
+            )
+
+        self.input_path = input_path
+        self.prodrop_analyzer = ProdropAnalyzer(input_path)
+        self.nonprodrop_analyzer = NonProdropAnalyzer(input_path)
+
+    def do_verb_analysis(self):
+        """
+        Perform the equivalent of running do_verb_analysis on both a
+        ProdropAnalyzer and NonProdropAnalyzer object, while being more
+        efficient by only iterating through the .parse files once.
+        """
+        self.verb_counts = {}
+        pa = self.prodrop_analyzer
+        npa = self.nonprodrop_analyzer
+
+        print('Starting combined analysis... ', end='')
+        for tree in self.itertrees(self.input_path):
+            pdverbs = pa.analyze_tree(tree)
+            npdverbs = npa.analyze_tree(tree)
+            self._update_verb_counts(pdverbs, npdverbs)
+            
+        print('Conplete.')
+
+    def write_csv(self):
+        outpath = normpath(join(
+            OUTPUT_PATH, 'verb_counts {0}.csv'.format(timestamp_now())
+        ))
+
+        with open(outpath, 'w', encoding='utf8') as outfile:
+            writer = csv.writer(outfile)
+            writer.writerow(['VERB', 'PRO-DROP COUNT', 'NON-PRO-DROP COUNT'])
+
+            for verb, counts in self.verb_counts.items():
+                writer.writerow([verb, counts.prodrop_count, counts.nonprodrop_count])
+
+    def _update_verb_counts(self, pdverbs, npdverbs):
+        for verb in pdverbs:
+            if verb in self.verb_counts:
+                self.verb_counts[verb].prodrop_count += 1
+            else:
+                data = self.VerbData()
+                data.prodrop_count = 1
+                self.verb_counts[verb] = data
+
+        for verb in npdverbs:
+            if verb in self.verb_counts:
+                self.verb_counts[verb].nonprodrop_count += 1
+            else:
+                data = self.VerbData()
+                data.nonprodrop_count = 1
+                self.verb_counts[verb] = data
+
+###############################################################################
 class ReportWriter():
     """
     Facilitates writing formatted report lines for simple types and structures.
@@ -425,18 +488,11 @@ class ReportWriter():
 ###############################################################################
 if __name__ == '__main__':
     timer = Timer()
-    outpath = normpath(join(
-        OUTPUT_PATH, 'verbs {0}.csv'.format(timestamp_now())
-    ))
-    with timer:
-        pa = ProdropAnalyzer(INPUT_PATH)
-        npa = NonProdropAnalyzer(INPUT_PATH)
-        
-        pa.do_verb_analysis()
-        npa.do_verb_analysis()
 
-        with open(outpath, 'w', encoding='utf8') as outfile:
-            write_combined_csv(outfile, pa, npa)
+    with timer:
+        ca = CombinedAnalyzer(INPUT_PATH)
+        ca.do_verb_analysis()
+        ca.write_csv()
                       
     print('\nTime: {0:.3f}s'.format(timer.total_time))
 
