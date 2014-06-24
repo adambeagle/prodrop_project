@@ -2,10 +2,69 @@
 prodrop_analysis.py
 Author: Adam Beagle
 
-PURPOSE:
+=======
+PURPOSE
+=======
     Handles the primary objective of the project, i.e. gathering and analyzing
-    pro-drop sentences.
+    subjects and their associated verbs.
+
+=====
+USAGE
+=====
+    The classes useful to an end-user are as follows:
+
+    ProdropAnalyzer
+    ---------------
+      Gathers statistics on pro-drop subjects and their associated verbs for an
+      entire corpus.
+
+    NonProdropAnalyzer
+    ------------------
+      Gathers statistics on non-pro-drop subjects and their associated verbs
+      for an entire corpus.
+
+    CombinedAnalyzer
+    ----------------
+      Facilitates running analysis of instances of both of the above classes in
+      an efficient manner.
+
+    Each of the above classes has, at minimum, the following methods:
+      do_analysis
+      print_report_basic
+      print_report_full
+      write_report_basic
+      write_report_full
+
+    The CombinedAnalyzer class also has a write_csv method to write a table
+    of pro-drop association and non-pro-drop association counts for each verb.
+
+    See each class' individual documentation, as well as that of the
+    SubjectVerbAnalyzer base class, for more details.
+
+=============
+USAGE EXAMPLE
+=============
+    A typical use-case (running the pro-drop analyzer, printing the basic
+    report, and writing the full report) is accomplished as follows:
+
+    # Create instance of analyzer, providing path to directory
+    # containing .parse files from which to examine parse trees.
+    pdanalyzer = ProdropAnalyzer('path/to/parsefiles/')
+
+    # Accumulate data by analyzing each tree in each file
+    # in the path provided. This step may take some time;
+    # 12,000 trees in 600 files takes ~18 seconds on my machine.
+    pdanalyzer.do_analysis()
+
+    # Print basic information to console
+    pdanalyzer.print_report_basic()
+
+    # Open a file in write mode and pass it to the write_report_full
+    # method to write complete report to a file.
+    with open('report.txt', 'w', encoding='utf8') as outfile:
+        pdanalyzer.write_report_full(outfile)
 """
+from abc import ABCMeta, abstractmethod
 import csv
 from os.path import isfile, isdir, join, normpath
 
@@ -35,7 +94,73 @@ def iterprodrops(tree):
     )
 
 ###############################################################################
-class SubjectVerbAnalyzer:
+class BaseAnalyzer(metaclass=ABCMeta):
+    """
+    Abstract base class to the *Analyzer classes.
+
+    Makes the itertrees method an alias to the proper function from util,
+    which differs based on whether input_path is a directory or a file.
+
+    METHODS:
+      * do_analysis (abstract)
+      * itertrees
+      * print_report_basic (abstract)
+      * print_report_full (abstract)
+      * write_report_basic (abstract)
+      * write_report_full (abstract)
+    """
+    def __init__(self, input_path):
+        """
+        input_path can be directory or file.
+
+        InputPathError is raised if input_path is not a valid path to
+        an existing directory or file.
+        """
+        if isfile(input_path):
+            self._itertreesfunc = itertrees
+        elif isdir(input_path):
+            self._itertreesfunc = itertrees_dir
+        else:
+            raise InputPathError(
+                "input_path is not a valid path to a directory or " +
+                "existing file.\ninput_path: {0}".format(input_path)
+            )
+
+        self._input_path = input_path
+
+    @abstractmethod
+    def do_analysis(self):
+        raise NotImplementedError(self.notimplementedmsg)
+    
+    def itertrees(self):
+        return self._itertreesfunc(self._input_path)
+
+    @abstractmethod
+    def print_report_basic(self, *args, **kwargs):
+        raise NotImplementedError(
+            "Inheriting classes must override and implement this method."
+        )
+
+    @abstractmethod
+    def print_report_full(self, *args, **kwargs):
+        raise NotImplementedError(
+            "Inheriting classes must override and implement this method."
+        )
+
+    @abstractmethod
+    def write_report_basic(self, *args, **kwargs):
+        raise NotImplementedError(
+            "Inheriting classes must override and implement this method."
+        )
+
+    @abstractmethod
+    def write_report_basic(self, *args, **kwargs):
+        raise NotImplementedError(
+            "Inheriting classes must override and implement this method."
+        )
+
+###############################################################################
+class SubjectVerbAnalyzer(BaseAnalyzer):
     """
     ATTRIBUTES:
     ===========
@@ -43,7 +168,7 @@ class SubjectVerbAnalyzer:
     * input_path
     * subject_descriptor
 
-    Populated by do_verb_analysis:
+    Populated by do_analysis:
     ------------------------------
       * failure_trees
       * ignored_tag_counts
@@ -55,7 +180,8 @@ class SubjectVerbAnalyzer:
 
     METHODS:
     ========
-      * do_verb_analysis
+      * analyze_tree
+      * do_analysis
       * itersubjects
       * print_report_basic
       * print_report_full
@@ -64,27 +190,23 @@ class SubjectVerbAnalyzer:
     """
     def __init__(self, input_path, subject_descriptor):
         """input_path may be to directory or existing .parse file."""
-
-        if isfile(input_path):
-            self.itertrees = itertrees
-        elif isdir(input_path):
-            self.itertrees = itertrees_dir
-        else:
-            raise ImportPathError(
-                "input_path is not a valid path to a directory or " +
-                "existing file.\ninput_path: {0}".format(input_path)
-            )
-
+        super().__init__(input_path)
+        
         self.subject_descriptor = subject_descriptor
-        self.input_path = input_path
         self.allowed_verb_tags = (
             'IV', 'PV', 'VERB', 'PSEUDO_VERB',
         )
 
-        # Instantiate all counters/dictionaries populated by do_verb_analysis
+        # Instantiate all counters/dictionaries populated by do_analysis
         self._reset()
 
     def analyze_tree(self, tree):
+        """
+        Analyze a single tree and return list of associated verbs found.
+        For each subject match as returned by itersubjects, update counters
+        and dictionaries accordingly.
+        A verb may appear multiple times in the returned list.
+        """
         self.tree_count += 1
         has_subject = False
         valid_verbs = []
@@ -117,13 +239,18 @@ class SubjectVerbAnalyzer:
 
         return valid_verbs
 
-    def do_verb_analysis(self):
+    def do_analysis(self):
+        """
+        For each tree in input_path (which may involve searching multiple
+        files if input_path is a directory), search for subject matches
+        using itersubjects and update counters and dictionaries accordingly.
+        """
         self._reset()
         
         print('Starting {0} search... '.format(
             self.subject_descriptor), end=''
         )
-        for tree in self.itertrees(self.input_path):
+        for tree in self.itertrees():
             self.analyze_tree(tree)
                 
         print('Complete.\n')
@@ -257,9 +384,6 @@ class NonProdropAnalyzer(SubjectVerbAnalyzer):
     def __init__(self, input_path):
         super().__init__(input_path, 'non-pro-drop')
 
-    # TODO Currently excluding ANY node whose child has a -NONE- tag,
-    # including traces, etc. Need to verify that this assumption is correct.
-    #
     # TODO Assuming a -NONE- tag always a direct child of NP-SBJ and not
     # further nested.
     def itersubjects(self, tree):
@@ -276,7 +400,7 @@ class NonProdropAnalyzer(SubjectVerbAnalyzer):
         ))
 
 ###############################################################################
-class CombinedAnalyzer:
+class CombinedAnalyzer(BaseAnalyzer):
     """
     Used to run a combined pro-drop and non-pro-drop analysis.
 
@@ -285,7 +409,7 @@ class CombinedAnalyzer:
       * verb_counts
 
     METHODS:
-      * do_verb_analysis
+      * do_analysis
       * write_csv
     """
     class VerbData:
@@ -296,25 +420,14 @@ class CombinedAnalyzer:
             
     def __init__(self, input_path):
         """input_path can be file or directory."""
-        self.verb_counts = {}
-
-        if isfile(input_path):
-            self.itertrees = itertrees
-        elif isdir(input_path):
-            self.itertrees = itertrees_dir
-        else:
-            raise ImportPathError(
-                "input_path is not a valid path to a directory or " +
-                "existing file.\ninput_path: {0}".format(input_path)
-            )
-
-        self.input_path = input_path
+        super().__init__(input_path)
+        
         self.prodrop_analyzer = ProdropAnalyzer(input_path)
         self.nonprodrop_analyzer = NonProdropAnalyzer(input_path)
 
-    def do_verb_analysis(self):
+    def do_analysis(self):
         """
-        Perform the equivalent of running do_verb_analysis on both a
+        Perform the equivalent of running do_analysis on both a
         ProdropAnalyzer and NonProdropAnalyzer object, while being more
         efficient by only iterating through the .parse files once.
         """
@@ -323,20 +436,40 @@ class CombinedAnalyzer:
         npa = self.nonprodrop_analyzer
 
         print('Starting combined analysis... ', end='')
-        for tree in self.itertrees(self.input_path):
+        for tree in self.itertrees():
             pdverbs = pa.analyze_tree(tree)
             npdverbs = npa.analyze_tree(tree)
             self._update_verb_counts(pdverbs, npdverbs)
             
         print('Conplete.')
 
+    def print_report_basic(self):
+        self.write_report_basic(stdout)
+
+    def print_report_full(self):
+        self.write_report_full(stdout)
+
+    def write_report_basic(self, out):
+        self.prodrop_analyzer.write_report_basic(out)
+        self.nonprodrop_analyzer.write_report_basic(out)
+
+    def write_report_full(self, out):
+        self.prodrop_analyzer.write_report_full(out)
+        self.nonprodrop_analyzer.write_report_full(out)
+
     def write_csv(self):
+        """
+        Write .csv file containing records in order:
+           verb, # pro-drop associations, # non-pro-drop associations
+
+        The records are written in no defined order.
+        """
         outpath = normpath(join(
             OUTPUT_PATH, 'verb_counts {0}.csv'.format(timestamp_now())
         ))
 
         with open(outpath, 'w', encoding='utf8') as outfile:
-            writer = csv.writer(outfile)
+            writer = csv.writer(outfile, lineterminator='\n')
             writer.writerow(['VERB', 'PRO-DROP COUNT', 'NON-PRO-DROP COUNT'])
 
             for verb, counts in self.verb_counts.items():
@@ -491,8 +624,8 @@ if __name__ == '__main__':
 
     with timer:
         ca = CombinedAnalyzer(INPUT_PATH)
-        ca.do_verb_analysis()
+        ca.do_analysis()
+        ca.print_report_basic()
         ca.write_csv()
                       
     print('\nTime: {0:.3f}s'.format(timer.total_time))
-
