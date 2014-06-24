@@ -66,17 +66,12 @@ USAGE EXAMPLE
 """
 from abc import ABCMeta, abstractmethod
 import csv
-from os.path import isfile, isdir, join, normpath
-
-from constants import TREEBANK_DATA_PATH
-from exceptions import InputPathError
-from parsetree import ParseTree
+from os.path import isfile, isdir
 from sys import stdout
-from util import (itertrees, itertrees_dir, Timer, timestamp_now,
-    update_distinct_counts)
 
-INPUT_PATH = TREEBANK_DATA_PATH
-OUTPUT_PATH = '../reports/' # Must be directory; Filename auto-generated
+from exceptions import InputPathError
+from util import itertrees, itertrees_dir, update_distinct_counts
+
 PRODROP_WORD_PATTERN = '^\*(?:-\d+)?$'
 
 ###############################################################################
@@ -298,10 +293,11 @@ class SubjectVerbAnalyzer(BaseAnalyzer):
         rw.write_int_stat('Distinct excluded sibling tags',
                           len(self.ignored_tag_counts))
 
-    def write_report_full(self, out):
+    def write_report_full(self, out, rw=None):
         """ """
-        rw = ReportWriter(out)
         sd = self.subject_descriptor
+        if not rw:
+            rw = ReportWriter(out)
         
         rw.write_heading_toplevel(
             '{0} VERB ASSOCIATION ANALYSIS REPORT'.format(sd.upper())
@@ -450,30 +446,36 @@ class CombinedAnalyzer(BaseAnalyzer):
         self.write_report_full(stdout)
 
     def write_report_basic(self, out):
-        self.prodrop_analyzer.write_report_basic(out)
-        self.nonprodrop_analyzer.write_report_basic(out)
+        rw = ReportWriter(out)
+        
+        rw.write_heading_toplevel('ProdropAnalyzer Results', skipline=1)
+        self.prodrop_analyzer.write_report_basic(out, rw)
+        
+        rw.write_heading_toplevel('NonProdropAnalyzer Results', skipline=1)
+        self.nonprodrop_analyzer.write_report_basic(out, rw)
 
     def write_report_full(self, out):
-        self.prodrop_analyzer.write_report_full(out)
-        self.nonprodrop_analyzer.write_report_full(out)
+        rw = ReportWriter(out)
+        
+        self.prodrop_analyzer.write_report_full(out, rw)
+        self.nonprodrop_analyzer.write_report_full(out, rw)
 
-    def write_csv(self):
+    def write_csv(self, out):
         """
-        Write .csv file containing records in order:
+        To the file object 'out,' write a .csv file containing records
+        with fields in the following order:
            verb, # pro-drop associations, # non-pro-drop associations
 
         The records are written in no defined order.
+
+        'out' is expected to be an open file object or stream. Remember
+        to set the proper encoding on the file if dealing with unicode.
         """
-        outpath = normpath(join(
-            OUTPUT_PATH, 'verb_counts {0}.csv'.format(timestamp_now())
-        ))
+        writer = csv.writer(out, lineterminator='\n')
+        writer.writerow(['VERB', 'PRO-DROP COUNT', 'NON-PRO-DROP COUNT'])
 
-        with open(outpath, 'w', encoding='utf8') as outfile:
-            writer = csv.writer(outfile, lineterminator='\n')
-            writer.writerow(['VERB', 'PRO-DROP COUNT', 'NON-PRO-DROP COUNT'])
-
-            for verb, counts in self.verb_counts.items():
-                writer.writerow([verb, counts.prodrop_count, counts.nonprodrop_count])
+        for verb, counts in self.verb_counts.items():
+            writer.writerow([verb, counts.prodrop_count, counts.nonprodrop_count])
 
     def _update_verb_counts(self, pdverbs, npdverbs):
         for verb in pdverbs:
@@ -585,6 +587,8 @@ class ReportWriter():
         If skipline is set, a newline is written before the heading.
         A blank line is always written after the heading.
         """
+        if skipline:
+            self.stream.write('\n')
         self.stream.write('{0}\n'.format('='*len(heading)))
         self.write_heading(heading, skipline=False)
         self.stream.write('\n')
@@ -617,15 +621,3 @@ class ReportWriter():
         
         for x in seq:
             self.stream.write('  {0}\n'.format(x))
-
-###############################################################################
-if __name__ == '__main__':
-    timer = Timer()
-
-    with timer:
-        ca = CombinedAnalyzer(INPUT_PATH)
-        ca.do_analysis()
-        ca.print_report_basic()
-        ca.write_csv()
-                      
-    print('\nTime: {0:.3f}s'.format(timer.total_time))
