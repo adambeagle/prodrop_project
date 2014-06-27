@@ -211,9 +211,7 @@ class SubjectVerbAnalyzer(BaseAnalyzer):
             self.subject_count += 1
             sibtags = []
 
-            result = self._check_siblings_for_verb(
-                node, self.allowed_verb_tags
-            )
+            result = self._get_associated_verb(node)
 
             # Success. Verb found
             if hasattr(result, 'tag'):
@@ -317,7 +315,7 @@ class SubjectVerbAnalyzer(BaseAnalyzer):
             sortonval=True, reverse=True
         )
 
-    def _check_siblings_for_verb(self, node, allowed_verb_tags):
+    def _check_siblings_for_verb(self, node):
         """
         Check node's siblings for a verb node whose tag starts with a
         value in allowed_verb_tags.
@@ -332,11 +330,33 @@ class SubjectVerbAnalyzer(BaseAnalyzer):
         for sib in self._get_previous_siblings(node):
             sibling_tags.append(sib.tag)
 
-            for tag in allowed_verb_tags:
+            for tag in self.allowed_verb_tags:
                 if sib.tag.startswith(tag):
                     return sib
 
         return sibling_tags
+
+    # TODO There are potential problems with this approach that need to
+    # be resolved. Can an associated verb be nested inside a sibling of
+    # one of the node's ancestors? Such verbs would not be found, and a
+    # false positive could occur.
+    def _get_associated_verb(self, node):
+        """
+        Walk up tree from node until verb found.
+        """
+        visited_tags = []
+
+        while node.parent is not None and not node.tag.startswith('VP'):
+            result = self._check_siblings_for_verb(node)
+
+            # Verb found in siblings. Return verb node
+            if hasattr(result, 'tag'):
+                return result
+
+            visited_tags += result
+            node = node.parent
+
+        return visited_tags
 
     def _get_previous_siblings(self, node):
         """
@@ -443,7 +463,7 @@ class CombinedAnalyzer(BaseAnalyzer):
         self.write_report_basic(stdout)
 
     def print_report_full(self):
-        self.write_report_full(stdout)
+        self.write_report_full(stdout, stdout)
 
     def write_report_basic(self, out):
         rw = ReportWriter(out)
@@ -454,11 +474,9 @@ class CombinedAnalyzer(BaseAnalyzer):
         rw.write_heading_toplevel('NonProdropAnalyzer Results', skipline=1)
         self.nonprodrop_analyzer.write_report_basic(out, rw)
 
-    def write_report_full(self, out):
-        rw = ReportWriter(out)
-        
-        self.prodrop_analyzer.write_report_full(out, rw)
-        self.nonprodrop_analyzer.write_report_full(out, rw)
+    def write_report_full(self, pdout, npdout):
+        self.prodrop_analyzer.write_report_full(pdout)
+        self.nonprodrop_analyzer.write_report_full(npdout)
 
     def write_csv(self, out):
         """
