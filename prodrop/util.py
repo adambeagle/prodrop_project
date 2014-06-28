@@ -8,7 +8,7 @@ DESCRIPTION:
 """
 from datetime import datetime
 from os import listdir
-from os.path import normpath, splitext
+from os.path import join, normpath, splitext
 import time
 
 from parsetree import ParseTree
@@ -23,17 +23,18 @@ def get_files_by_ext(directory, ext, prepend_dir=False):
     """
     files = []
 
-    if not ext[0] == '.':
-        ext = '.{0}'.format(ext.lower())
-    else:
-        ext = ext.lower()
+    # Force ext to have leading period and be lowercase
+    ext = '{0}{1}'.format(
+        '.' if not ext[0] == '.' else '',
+        ext.lower()
+    )
 
-    directory = normpath(directory)
-    
+    # For each file in 'directory' check if the file's extension matches
+    # 'ext' and append filename to 'files' if so.
     for f in listdir(directory):
         if splitext(f)[1].lower() == ext:
             if prepend_dir:
-                files.append('{0}\\{1}'.format(directory, f))
+                files.append(normpath(join(directory, f)))
             else:
                 files.append(f)
 
@@ -42,20 +43,28 @@ def get_files_by_ext(directory, ext, prepend_dir=False):
 def itertreelines(filepath):
     """
     Yield each set of lines from .parse file given by filepath that
-    represent a single parse tree.
+    represent a single parse tree. Yielded values are lists of strings,
+    each a line as found in the file given by filepath. Line-end characters
+    are retained.
     """
-    start = '(TOP '
-    end = '\n'
+    tree_start = '(TOP '
+    tree_end = '\n'
     current_tree_lines = []
     
     with open(filepath, encoding='utf8') as f:
         current_tree_lines = []
+        
         for line in f:
-                
-            if line.startswith(start):
+
+            # Starting line; Begin new list
+            if line.startswith(tree_start):
                 current_tree_lines = [line]
-            elif not line.startswith(end):
+
+            # Normal (non start or end) line; Append to list
+            elif not line.startswith(tree_end):
                 current_tree_lines.append(line)
+
+            # End; Yield list if not empty
             else:
                 if current_tree_lines:
                     yield current_tree_lines
