@@ -6,6 +6,7 @@ PURPOSE:
     Contains a data structure that holds a parse tree and facilitates
     easy navigation and searching.
 """
+from abc import ABCMeta, abstractmethod
 import re
 
 from exceptions import (CustomCallableError, SearchFlagError,
@@ -17,26 +18,34 @@ from exceptions import (CustomCallableError, SearchFlagError,
 thrunode_pattern = r'^\((?P<tag>\S+) \('
 endnode_pattern = r'^\((?P<tag>\S+) (?P<word>[^\s()]+)\)'
 
-class ParseTreeNode:
+class ParseTreeNode(metaclass=ABCMeta):
     """
     ATTRIBUTES:
       * parent
+      * has_children (read-only; Not implemented)
+      * is_end (read-only; Not implemented)
       * tag
     """
     def __init__(self, parent, tag):
+        """
+        Any new node is automatically added to parent's children
+        attribute.
+        """
         self.parent = parent
         self.tag = tag
-        
+
         if self.parent is not None:
             self.parent.add_child(self)
             
     @property
+    @abstractmethod
     def has_children(self):
-        raise NotImplementedError()
+        raise NotImplementedError('Must be implemented by inheriting classes.')
         
     @property
+    @abstractmethod
     def is_end(self):
-        raise NotImplementedError()
+        raise NotImplementedError('Must be implemented by inheriting classes.')
 
 class ParseTreeThruNode(ParseTreeNode):
     """
@@ -44,8 +53,8 @@ class ParseTreeThruNode(ParseTreeNode):
       * children (read-only)
 
     INHERITED ATTRIBUTES:
-      * has_children
-      * is_end
+      * has_children (read-only)
+      * is_end (read-only)
       * parent
       * tag
       
@@ -58,12 +67,14 @@ class ParseTreeThruNode(ParseTreeNode):
         
     def add_child(self, child):
         if not isinstance(child, ParseTreeNode):
-            raise TypeError()
+            raise TypeError('Child must be instance of parsetree.' +
+                            'ParseTreeNode. Got: {0}'.format(child))
+        
         self._children += (child, )
         
     @property
     def children(self):
-        return self._children[:]
+        return self._children
         
     @property
     def has_children(self):
@@ -79,8 +90,8 @@ class ParseTreeEndNode(ParseTreeNode):
       * word
 
     INHERITED ATTRIBUTES:
-      * has_children
-      * is_end
+      * has_children (read-only)
+      * is_end (read-only)
       * parent
       * tag
     """
