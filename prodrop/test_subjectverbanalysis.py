@@ -1,7 +1,7 @@
 import re
 import unittest
 
-from prodrop_analysis import PRODROP_WORD_PATTERN
+from subjectverbanalysis import PRODROP_WORD_PATTERN
 
 class TestPropdropWordPattern(unittest.TestCase):
     def setUp(self):
