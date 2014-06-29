@@ -17,13 +17,13 @@ from exceptions import (CustomCallableError, SearchFlagError,
 # Placed here so they are available to tests.
 thrunode_pattern = r'^\((?P<tag>\S+) \('
 endnode_pattern = r'^\((?P<tag>\S+) (?P<word>[^\s()]+)\)'
-
+    
 class ParseTreeNode(metaclass=ABCMeta):
     """
     ATTRIBUTES:
-      * parent
-      * has_children (read-only; Not implemented)
-      * is_end (read-only; Not implemented)
+      * has_children (abstract, read-only)
+      * is_end (abstract, read-only)
+      * parent (read-only)
       * tag
     """
     def __init__(self, parent, tag):
@@ -31,32 +31,47 @@ class ParseTreeNode(metaclass=ABCMeta):
         Any new node is automatically added to parent's children
         attribute.
         """
-        self.parent = parent
         self.tag = tag
 
-        if self.parent is not None:
-            self.parent.add_child(self)
+        # Ensure valid parent, add self to parent's children list
+        if parent is not None:
+            try:
+                parent.add_child(self)
+            except AttributeError:
+                raise TypeError("'parent' expects instance of " +
+                    "ParseTreeThruNode. Got: {0}".format(parent)
+                )
+
+        self._parent = parent
             
     @property
     @abstractmethod
     def has_children(self):
-        raise NotImplementedError('Must be implemented by inheriting classes.')
+        """
+        Return True if node has at least 1 child, False otherwise.
+        Effectively checks whether a node is a thru-node.
+        """
+        pass
         
     @property
     @abstractmethod
     def is_end(self):
-        raise NotImplementedError('Must be implemented by inheriting classes.')
+        """Return True if node is end node, False otherwise."""
+        pass
+    
+    # Parent must be read-only because reassigning it would break the
+    # structure of the tree, as the original parent's children would still
+    # include the node.
+    @property
+    def parent(self):
+        return self._parent
 
 class ParseTreeThruNode(ParseTreeNode):
     """
     ATTRIBUTES:
       * children (read-only)
-
-    INHERITED ATTRIBUTES:
       * has_children (read-only)
       * is_end (read-only)
-      * parent
-      * tag
       
     METHODS:
       * add_child
@@ -87,13 +102,9 @@ class ParseTreeThruNode(ParseTreeNode):
 class ParseTreeEndNode(ParseTreeNode):
     """
     ATTRIBUTES:
-      * word
-
-    INHERITED ATTRIBUTES:
       * has_children (read-only)
       * is_end (read-only)
-      * parent
-      * tag
+      * word
     """
     def __init__(self, parent, tag, word):
         super().__init__(parent, tag)
@@ -228,10 +239,11 @@ class ParseTree:
         """
         Yield each node during depth-first traversal of tree.
         """
+        # node defaults to self.top when method called with no arguments
         node = kwargs.get('node', self.top)
         yield node
 
-        if isinstance(node, ParseTreeThruNode):
+        if node.has_children:
             for child in node.children:
                 for n in self.iternodes(node=child):
                     yield n
@@ -324,28 +336,21 @@ class ParseTree:
 
     def _get_comparison_function(self, flag, attr_name, **kwargs):
         """
-        Return the comparison functions for tag and word to be used in
-        search(), in that order.
+        Return the comparison function for the attribute given by
+        'attr_name.' 
 
-        The comparisons all have the signature (phrase, attribute)
+        Each comparison function has the signature (phrase, attribute)
         """
         if flag == self.CUSTOM:
             return self._get_custom_comparison_function(attr_name, **kwargs)
-        
-        exact = lambda phrase, s: phrase == s if phrase else True
-        contains = lambda phrase, s: phrase in s
-        startswith = lambda phrase, s: s.startswith(phrase)
-        rematch = lambda pattern, s: re.match(pattern, s)
-        not_rematch = lambda pattern, s : re.match(pattern, s) is None
-        notfunc = lambda phrase, s: not phrase == s
 
         funcmap = {
-            self.EXACT : exact,
-            self.CONTAINS : contains,
-            self.STARTSWITH : startswith,
-            self.REMATCH : rematch,
-            self.NOT_REMATCH : not_rematch,
-            self.IS_NOT : notfunc,
+            self.EXACT : lambda phrase, s: phrase == s if phrase else True,
+            self.CONTAINS : lambda phrase, s: phrase in s,
+            self.STARTSWITH : lambda phrase, s: s.startswith(phrase),
+            self.REMATCH : lambda pattern, s: re.match(pattern, s),
+            self.NOT_REMATCH : lambda pattern, s : re.match(pattern, s) is None,
+            self.IS_NOT : lambda phrase, s: not phrase == s,
         }
 
         try:
@@ -402,7 +407,8 @@ class ParseTree:
         results = []
         
         for node in self.iterendnodes():
-            if (tagfunc(tag, node.tag) and wordfunc(word, node.word)
+            if (tagfunc(tag, node.tag)
+                and wordfunc(word, node.word)
                 and parentfunc(parent_tag, node.parent.tag)
             ):
                 results.append(node)
