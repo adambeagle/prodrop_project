@@ -14,7 +14,7 @@ import re
 import unittest
 
 from constants import TREEBANK_DATA_PATH
-from util import get_files_by_ext
+from util import get_files_by_ext, itertrees_dir
 
 INPUT_DIR = TREEBANK_DATA_PATH
 
@@ -79,6 +79,25 @@ class TestTreebankDataset(unittest.TestCase):
                     else:
                         self.assertNotIn('(TOP', line)
                         prev_blank = False
+
+class ParseTreeTestCase(unittest.TestCase):
+    """Cases involving building ParseTree objects from dataset"""
+    
+    def test_tag_startswith_base_verb(self):
+        """
+        Verify that primary base verb tags appear at the start of a tag, if
+        they appear at all.
+        """
+        verbs = ('PV', 'IV', 'VERB', 'PSEUDO_VERB')
+        
+        for tree in itertrees_dir(TREEBANK_DATA_PATH):
+            for node in tree.iternodes():
+                verb_in_tag = any((verb in node.tag for verb in verbs))
+                
+                if verb_in_tag:
+                    self.assertTrue(
+                        any((node.tag.startswith(verb) for verb in verbs))
+                    )
 
 ###############################################################################
 if __name__ == '__main__':
