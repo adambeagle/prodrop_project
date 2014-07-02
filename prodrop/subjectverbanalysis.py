@@ -248,7 +248,7 @@ class SubjectVerbAnalyzer(BaseAnalyzer):
                 
         print('Complete.\n')
 
-    def itersubjects(self):
+    def itersubjects(self, tree):
         raise NotImplementedError(
             "Inheriting classes must override and implement this method."
         )
@@ -342,7 +342,12 @@ class SubjectVerbAnalyzer(BaseAnalyzer):
     # false positive could occur.
     def _get_associated_verb(self, node):
         """
-        Walk up tree from node until verb found.
+        Return nearest verb node to passed 'node' by searching the previous
+        siblings of 'node' and its ancestors until either a verb is found
+        or a VP node is reached.
+        
+        If no associated verb found, return list of tags of nodes visited
+        during search.
         """
         visited_tags = []
 
