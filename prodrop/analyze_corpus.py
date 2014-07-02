@@ -1,6 +1,10 @@
 """
 analyze_corpus.py
 Author: Adam Beagle
+
+PURPOSE:
+    Entry point for the project. Does combined analysis and prints reports to
+    a timestamped folder whose root is OUTPUT_PATH, defined below.
 """
 from os import mkdir
 from os.path import join, normpath
@@ -12,6 +16,13 @@ from util import Timer, timestamp_now
 INPUT_PATH =  TREEBANK_DATA_PATH #'../treebank_data/00/ann_0001.parse'#
 OUTPUT_PATH = '../reports/' # Must be directory; Filename auto-generated
 
+def timestamped_file_path(filename, timestamp):
+    return normpath(join(
+        OUTPUT_PATH,
+        timestamp,
+        filename
+    ))
+    
 ###############################################################################
 if __name__ == '__main__':
     timer = Timer()
@@ -19,24 +30,10 @@ if __name__ == '__main__':
 
     mkdir(normpath(join(OUTPUT_PATH, nowstamp)))
     
-    csvpath = normpath(join(
-        OUTPUT_PATH,
-        nowstamp,
-        'verbs.csv'.format(nowstamp)
-    ))
-
-    pd_report_path = normpath(join(
-        OUTPUT_PATH,
-        nowstamp,
-        'pro-drop-report.txt'.format(nowstamp)
-    ))
+    csvpath = timestamped_file_path('verbs.csv', nowstamp)
+    pd_report_path = timestamped_file_path('pro-drop report.txt', nowstamp)
+    npd_report_path = timestamped_file_path('non-pro-drop report.txt', nowstamp)
     
-    npd_report_path = normpath(join(
-        OUTPUT_PATH,
-        nowstamp,
-        'non-pro-drop report.txt'.format(nowstamp)
-    ))
-
     with timer:
         ca = CombinedAnalyzer(INPUT_PATH)
         ca.do_analysis()
