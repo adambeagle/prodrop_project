@@ -14,6 +14,7 @@ import re
 import unittest
 
 from constants import TREEBANK_DATA_PATH
+from subjectverbanalysis import PRODROP_WORD_PATTERN
 from util import get_files_by_ext, itertrees_dir
 
 INPUT_DIR = TREEBANK_DATA_PATH
@@ -24,6 +25,11 @@ class TestTreebankDataset(unittest.TestCase):
     endnode_pattern = '\([^()]+\)'
 
     def test_endnode_single_space(self):
+        """
+        Verify that an end node, containing a tag and a word, always contains
+        a single space character. This ensures consistent separation of the
+        tag and the word.
+        """
         match_found = False
         
         for path in self.parse_files:
@@ -98,6 +104,32 @@ class ParseTreeTestCase(unittest.TestCase):
                     self.assertTrue(
                         any((node.tag.startswith(verb) for verb in verbs))
                     )
+
+# Test fails, but it is yet to be determined if that is important.
+# It was already known what nodes besides NP-SBJ can be a pro-drop's parent,
+# and it was decided to ignore them.
+##    def test_prodrop_nested_in_npsbj(self):
+##        """
+##        Verify that the only context in which a pro-drop appears nested
+##        inside NP-SBJ is as its direct child.
+##        """
+##        pd_found = False
+##        
+##        for tree in itertrees_dir(TREEBANK_DATA_PATH):
+##            for pdnode in tree.search(
+##                tag='-NONE-',
+##                word=PRODROP_WORD_PATTERN,
+##                word_flag=tree.REMATCH
+##            ):
+##                pd_found = True
+##
+##                if not pdnode.parent.tag.startswith('NP-SBJ') and not pdnode.parent.tag.startswith('NP-OBJ'):
+##                    node = pdnode.parent.parent
+##                    while node is not None:
+##                        self.assertFalse(node.tag.startswith('NP-SBJ'))
+##                        node = node.parent
+##                    
+##        self.assertTrue(pd_found)
 
 ###############################################################################
 if __name__ == '__main__':
