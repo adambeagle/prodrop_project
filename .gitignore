@@ -3,6 +3,7 @@ treebank_data/*/*
 !treebank_data/testdata/*
 reports/*
 docs/*.lnk
+.idea/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
