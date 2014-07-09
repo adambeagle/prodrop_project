@@ -4,6 +4,8 @@ README
 
 This repository contains the source for a project involving data extraction and analysis from the Penn Arabic Treebank. The primary goal of the project is analysis and comparison of pro-drop and non-pro-drop subjects and their association with verbs. The ``parsetree`` module could be useful for any user desiring to build/traverse/search Penn Treebank data, however.
 
+Repository author: Adam Beagle
+
 *******************
 Repository Contents
 *******************
@@ -18,3 +20,9 @@ Usage
 *****
 
 See the docstrings at the top of ``prodrop/subjectverbanalysis.py`` and ``prodrop/parsetree.py``. An entry point of the project is located in ``prodrop/analyze_corpus.py``.
+
+*****
+Legal
+*****
+
+See ``docs/LICENSE.txt`` for license information.
